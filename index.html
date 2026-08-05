@@ -1363,9 +1363,9 @@ function openTicket(t){
   $('tk-code').textContent=t.code||'';
   drawQR($('tk-canvas'), (t.code||'')+ev.id);
   const c=$('tk-cancel'); c.classList.remove('confirm'); c.textContent='Cancel booking';
-  $('tsheet').classList.add('open');
+  $('tsheet').classList.add('open'); syncNav();
 }
-function closeTicket(){ $('tsheet').classList.remove('open'); state.selTicket=null; }
+function closeTicket(){ $('tsheet').classList.remove('open'); state.selTicket=null; syncNav(); }
 $('tk-back').onclick=closeTicket;
 $('tk-cancel').onclick=()=>{
   const c=$('tk-cancel');
@@ -1488,7 +1488,7 @@ function sendMsg(text){
 function openSupport(){
   if(!state.support.length){ state.support.push({who:'bot',t:WELCOME}); saveState(); }
   renderChat();
-  $('support').classList.add('open');
+  $('support').classList.add('open'); syncNav();
   const chips=$('chat-chips'); chips.innerHTML='';
   QUICKS.forEach(qk=>{
     const b=document.createElement('button');
@@ -1497,7 +1497,7 @@ function openSupport(){
     chips.appendChild(b);
   });
 }
-$('sp-back').onclick=()=>$('support').classList.remove('open');
+$('sp-back').onclick=()=>{ $('support').classList.remove('open'); syncNav(); };
 $('chat-send').onclick=()=>{ sendMsg($('chat-in').value); $('chat-in').value=''; };
 $('chat-in').addEventListener('keydown',e=>{ if(e.key==='Enter'){ sendMsg(e.target.value); e.target.value=''; } });
 $('tix-help').onclick=openSupport;
@@ -1512,9 +1512,19 @@ function toast(msg){
   t._tm=setTimeout(()=>t.classList.remove('show'),1800);
 }
 /* ---------- overlay helpers ---------- */
-function openPv(id){ $(id).classList.add('open'); }
-function closePv(id){ $(id).classList.remove('open'); }
+/* Hide the bottom nav whenever any full-screen overlay is open (sheet, ticket detail,
+   pv screens, success modal). syncNav() is called directly wherever we know an overlay
+   toggled (immediate, no delay), with a MutationObserver as a catch-all safety net for
+   any path that flips an 'open' class without going through these helpers. */
+function syncNav(){
+  const anyOpen = document.querySelector('.pv.open, .tsheet.open, .sheet.open, .success.open');
+  document.querySelector('.nav').style.display = anyOpen ? 'none' : 'flex';
+}
+function openPv(id){ $(id).classList.add('open'); syncNav(); }
+function closePv(id){ $(id).classList.remove('open'); syncNav(); }
 document.querySelectorAll('[data-close]').forEach(b=>{ b.onclick=()=>closePv(b.dataset.close); });
+new MutationObserver(syncNav).observe(document.querySelector('.screens'), {subtree:true, attributes:true, attributeFilter:['class']});
+syncNav();
 
 /* ---------- account settings ---------- */
 let pendingPhoto=null;
@@ -2264,17 +2274,17 @@ function openSheet(ev){
   $('d-mapvenue').textContent=ev.venue;
   $('d-price').innerHTML=peso(ev.price)+'<small>/person</small>';
   syncHeart();
-  $('veil').classList.add('open'); $('sheet').classList.add('open');
+  $('veil').classList.add('open'); $('sheet').classList.add('open'); syncNav();
 }
 function syncHeart(){
   if(!state.sel) return;
   const on=state.favs.has(state.sel.id);
   $('d-heart').innerHTML=`<svg width="17" height="17" viewBox="0 0 24 24" fill="${on?'#FF4D67':'none'}" stroke="${on?'#FF4D67':'currentColor'}" stroke-width="2"><path d="M12 21C7 16.6 3 13.4 3 9.3 3 6.4 5.2 4 8 4c1.6 0 3.1.8 4 2 1-1.2 2.4-2 4-2 2.8 0 5 2.4 5 5.3 0 4.1-4 7.3-9 11.7Z"/></svg>`;
 }
-function closeSheet(){ $('veil').classList.remove('open'); $('sheet').classList.remove('open'); }
+function closeSheet(){ $('veil').classList.remove('open'); $('sheet').classList.remove('open'); syncNav(); }
 $('veil').onclick=closeSheet; $('d-back').onclick=closeSheet;
 $('d-heart').onclick=()=>toggleFav(state.sel.id);
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();closeTicket();['success','pay','addcard','passcode','support','console','acct','linked','followscr','attendscr','settingsscr','editevent','adminlogin','buyerauth'].forEach(id=>$(id).classList.remove('open'));}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();closeTicket();['success','pay','addcard','passcode','support','console','acct','linked','followscr','attendscr','settingsscr','editevent','adminlogin','buyerauth'].forEach(id=>$(id).classList.remove('open'));syncNav();}});
 
 /* ---------- payment flow ---------- */
 let pay={ev:null, qty:1, total:0, method:null, agreed:false, pin:''};
@@ -2431,7 +2441,7 @@ async function completeBooking(){
   $('passcode').classList.remove('open');
   $('pay').classList.remove('open');
   closeSheet();
-  $('success').classList.add('open');
+  $('success').classList.add('open'); syncNav();
   try{
     await sb.from('bookings').insert({
       event_id: pay.ev.id, code, qty: pay.qty, total_amount: pay.total,
@@ -2443,8 +2453,8 @@ async function completeBooking(){
 }
 
 $('cta').onclick=openPay;
-$('success-btn').onclick=()=>{ $('success').classList.remove('open'); goTab('tickets'); };
-$('success-home').onclick=()=>{ $('success').classList.remove('open'); goTab('home'); };
+$('success-btn').onclick=()=>{ $('success').classList.remove('open'); syncNav(); goTab('tickets'); };
+$('success-home').onclick=()=>{ $('success').classList.remove('open'); syncNav(); goTab('home'); };
 
 /* ---------- tabs ---------- */
 function goTab(tab){
