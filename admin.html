@@ -14,7 +14,9 @@
   .shell{display:flex;min-height:100vh;max-width:1280px;margin:0 auto}
 
   /* sidebar */
-  .side{width:225px;flex-shrink:0;border-right:1px solid var(--line);padding:22px 14px;display:flex;flex-direction:column;gap:4px}
+  .side{width:225px;flex-shrink:0;border-right:1px solid var(--line);padding:22px 14px;display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden}
+  .side::before{content:'';position:absolute;inset:0;background:url('assets/agc-holdings-logo.jpg') center/80% no-repeat;opacity:.07;pointer-events:none;z-index:0}
+  .side>*{position:relative;z-index:1}
   .logo{font-size:17px;font-weight:800;padding:0 10px 4px}
   .logo i{font-style:normal;color:var(--red2)}
   .logo-sub{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted2);padding:0 10px 18px}
