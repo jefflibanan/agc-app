@@ -288,7 +288,78 @@ if(!window.supabase){
 }
 const SUPABASE_URL='https://herebzgcxdoinkwmmhhy.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlcmViemdjeGRvaW5rd21taGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4OTc1MjQsImV4cCI6MjEwMTQ3MzUyNH0.KBYJabS8LR5u5SFLd3wZnLI2AymxzawsJqSDliDt_zg';
-const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+/* Session storage backed by BOTH localStorage and IndexedDB. If something in the
+   browser wipes localStorage for this site (extension, privacy setting, etc.) but
+   leaves IndexedDB alone, the session self-heals from the IndexedDB copy instead
+   of forcing a re-login. */
+const resilientStorage=(function(){
+  const DB='sb_auth_backup', STORE='kv';
+  function openDb(){
+    return new Promise((resolve,reject)=>{
+      if(!window.indexedDB){ reject(new Error('no indexedDB')); return; }
+      const req=indexedDB.open(DB,1);
+      req.onupgradeneeded=()=>{ req.result.createObjectStore(STORE); };
+      req.onsuccess=()=>resolve(req.result);
+      req.onerror=()=>reject(req.error);
+    });
+  }
+  async function idbGet(key){
+    try{
+      const db=await openDb();
+      return await new Promise((resolve,reject)=>{
+        const tx=db.transaction(STORE,'readonly');
+        const req=tx.objectStore(STORE).get(key);
+        req.onsuccess=()=>resolve(req.result==null?null:req.result);
+        req.onerror=()=>reject(req.error);
+      });
+    }catch(e){ return null; }
+  }
+  async function idbSet(key,value){
+    try{
+      const db=await openDb();
+      await new Promise((resolve,reject)=>{
+        const tx=db.transaction(STORE,'readwrite');
+        tx.objectStore(STORE).put(value,key);
+        tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
+      });
+    }catch(e){}
+  }
+  async function idbRemove(key){
+    try{
+      const db=await openDb();
+      await new Promise((resolve,reject)=>{
+        const tx=db.transaction(STORE,'readwrite');
+        tx.objectStore(STORE).delete(key);
+        tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
+      });
+    }catch(e){}
+  }
+  return {
+    async getItem(key){
+      let v=null;
+      try{ v=localStorage.getItem(key); }catch(e){}
+      if(v){ idbSet(key,v); return v; }
+      v=await idbGet(key);
+      if(v){
+        try{ localStorage.setItem(key,v); }catch(e){}
+        console.log('[auth-debug] session recovered from IndexedDB backup (localStorage was empty)');
+        return v;
+      }
+      return null;
+    },
+    async setItem(key,value){
+      try{ localStorage.setItem(key,value); }catch(e){}
+      idbSet(key,value);
+    },
+    async removeItem(key){
+      try{ localStorage.removeItem(key); }catch(e){}
+      idbRemove(key);
+    }
+  };
+})();
+
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{ auth:{ storage:resilientStorage } });
 
 const BRANDS={
   billboard:'Billboard Philippines', rolling:'Rolling Stone Philippines', game:'The GAME',
