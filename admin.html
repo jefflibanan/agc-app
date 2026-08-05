@@ -323,16 +323,20 @@ let authSession=null, authProfile=null, authReady=false, resolveAuthReady;
 const authReadyPromise=new Promise(res=>{ resolveAuthReady=res; });
 sb.auth.onAuthStateChange(async (event,session)=>{
   console.log('[auth-debug] onAuthStateChange fired:', event, 'session:', !!session);
-  authSession=session;
-  if(session){
-    try{
-      const { data, error } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',session.user.id).single();
-      authProfile=data||null;
-      console.log('[auth-debug] profile fetch result:', data, 'error:', error);
-    }catch(e){ authProfile=null; console.log('[auth-debug] profile fetch threw:', e); }
-  }else authProfile=null;
-  if(!authReady){ authReady=true; resolveAuthReady(); console.log('[auth-debug] authReady resolved, authProfile:', authProfile); }
-  else{ currentSession() ? showShell() : showLogin(); }
+  try{
+    authSession=session;
+    if(session){
+      try{
+        const { data, error } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',session.user.id).single();
+        authProfile=data||null;
+        console.log('[auth-debug] profile fetch result:', data, 'error:', error);
+      }catch(e){ authProfile=null; console.log('[auth-debug] profile fetch threw:', e); }
+    }else authProfile=null;
+  }catch(e){ console.log('[auth-debug] onAuthStateChange handler threw:', e); authProfile=null; }
+  finally{
+    if(!authReady){ authReady=true; resolveAuthReady(); console.log('[auth-debug] authReady resolved, authProfile:', authProfile); }
+    else{ currentSession() ? showShell() : showLogin(); }
+  }
 });
 function currentSession(){
   return (authSession && authProfile && authProfile.is_admin) ? {email:authProfile.email, isOwner:!!authProfile.is_owner} : null;
@@ -682,8 +686,8 @@ $('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')(loginMode==='
 $('logout-btn').onclick=async ()=>{ await signOutAdmin(); showLogin(); };
 
 (async function boot(){
-  await loadEventsFromSupabase();
-  await authReadyPromise;
+  try{ await loadEventsFromSupabase(); }catch(e){ console.log('[auth-debug] loadEventsFromSupabase threw:', e); }
+  await Promise.race([ authReadyPromise, new Promise(res=>setTimeout(res,6000)) ]);
   const cs=currentSession();
   console.log('[auth-debug] boot deciding:', cs?'showShell':'showLogin', 'authSession:', !!authSession, 'authProfile:', authProfile);
   cs ? showShell() : showLogin();
