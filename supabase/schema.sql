@@ -38,6 +38,7 @@ create table if not exists bookings (
   buyer_name text,
   buyer_email text,
   device_id text,                     -- locally-generated id (see app code) so a device can re-fetch its own bookings
+  user_id uuid references auth.users(id),   -- set when a signed-in buyer checks out; null for guest checkout
   status text not null default 'confirmed' check (status in ('confirmed','cancelled')),
   created_at timestamptz not null default now()
 );
@@ -49,12 +50,17 @@ create table if not exists checkins (
   checked_in_by uuid references auth.users(id)
 );
 
--- One row per admin/organizer (created only for people who sign in to the console — buyers don't get a row).
+-- One row per Supabase Auth user, admin or buyer. is_admin=false + no invite = a
+-- regular buyer account. name/city/photo_url are the buyer-facing profile fields
+-- (unused by admins, but harmless to have on the same row).
 create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null,
   is_admin boolean not null default false,
   is_owner boolean not null default false,
+  name text,
+  city text,
+  photo_url text,
   created_at timestamptz not null default now()
 );
 
@@ -136,6 +142,10 @@ create policy "anyone can book" on bookings for insert with check (true);
 drop policy if exists "admins view all bookings" on bookings;
 create policy "admins view all bookings" on bookings for select using (is_admin());
 
+-- a signed-in buyer can see their own bookings (guests use get_bookings_by_codes() instead)
+drop policy if exists "users view own bookings" on bookings;
+create policy "users view own bookings" on bookings for select using (auth.uid() = user_id);
+
 drop policy if exists "admins update bookings" on bookings;
 create policy "admins update bookings" on bookings for update using (is_admin());
 
@@ -167,6 +177,20 @@ create policy "admins delete invites" on admin_invites for delete using (is_admi
 -- ============================================================
 -- FUNCTIONS the app calls with the public anon key
 -- ============================================================
+
+-- Lets a signed-in buyer update their own display info, without touching is_admin/
+-- is_owner — same reasoning as the profile-escalation fix: a plain client UPDATE
+-- policy can't restrict which columns change, so this only ever touches these three.
+create or replace function public.update_own_profile(p_name text, p_city text, p_photo_url text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update profiles set name = p_name, city = p_city, photo_url = p_photo_url where id = auth.uid();
+end;
+$$;
 
 -- A buyer's own device looks up its tickets by the codes it already has saved locally.
 -- Safe to expose publicly: a code is only known to whoever received that specific ticket.

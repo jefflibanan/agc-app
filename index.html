@@ -603,6 +603,7 @@
 
       <div class="sec"><h2>Account</h2></div>
       <div class="menu">
+        <button class="mrow" data-act="buyerauth" id="buyerauth-row"><span class="mi"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg></span><span id="buyerauth-label">Sign in</span><span class="chev">›</span></button>
         <button class="mrow" data-act="account"><span class="mi"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>Account settings<span class="chev">›</span></button>
         <button class="mrow" data-act="linked"><span class="mi"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg></span>Linked Accounts<span class="chev">›</span></button>
         <button class="mrow" data-act="following"><span class="mi"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21C7 16.6 3 13.4 3 9.3 3 6.4 5.2 4 8 4c1.6 0 3.1.8 4 2 1-1.2 2.4-2 4-2 2.8 0 5 2.4 5 5.3 0 4.1-4 7.3-9 11.7Z"/></svg></span>Following<span class="chev">›</span></button>
@@ -896,6 +897,71 @@
       <div class="pv-scroll" style="padding:12px 0 40px" id="attend-list"></div>
     </div>
 
+    <!-- ========== BUYER SIGN IN / ACCOUNT ========== -->
+    <div class="pv" id="buyerauth" role="dialog" aria-modal="true" aria-label="Sign in" style="background:var(--bg)">
+
+      <!-- landing: full-bleed hero + provider choices -->
+      <div id="ba-landing" style="position:absolute;inset:0;display:flex;flex-direction:column">
+        <div style="position:relative;height:58%;flex-shrink:0">
+          <img src="" id="ba-hero-img" alt="" style="width:100%;height:100%;object-fit:cover;display:block">
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,6,6,.15) 0%,rgba(7,6,6,.55) 55%,var(--bg) 100%)"></div>
+          <button class="icon-btn" data-close="buyerauth" aria-label="Back" style="position:absolute;top:14px;left:16px;background:rgba(7,6,6,.55);border:1px solid rgba(255,255,255,.18)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;padding:0 24px 22px;margin-top:-14px;position:relative;z-index:1">
+          <div style="text-align:center;margin-bottom:22px">
+            <div style="font-size:21px;font-weight:800;text-wrap:balance">Let's get started</div>
+            <div style="font-size:12.5px;color:var(--muted);margin-top:7px;line-height:1.5">Sign up or log in to see what's happening near you</div>
+          </div>
+          <button class="btn" id="ba-continue-email" style="width:100%;padding:15px;font-size:13.5px">Continue with Email</button>
+          <button id="ba-continue-google" style="width:100%;padding:14px;margin-top:10px;border-radius:100px;background:var(--card);border:1px solid var(--line2);color:var(--txt);font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">
+            <svg width="17" height="17" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.4 0 10.3-2.1 14-5.5l-6.5-5.5C29.4 34.9 26.8 36 24 36c-5.3 0-9.7-3.1-11.4-7.6l-6.6 5.1C9.6 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.9 2.5-2.5 4.6-4.6 6l6.5 5.5C39.9 37.4 44 31.6 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+            Continue with Google
+          </button>
+          <button id="ba-continue-facebook" style="width:100%;padding:14px;margin-top:10px;border-radius:100px;background:var(--card);border:1px solid var(--line2);color:var(--txt);font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.07C24 5.4 18.6 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.7 4.53-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.95.93-1.95 1.89v2.26h3.32l-.53 3.49h-2.79V24C19.61 23.1 24 18.1 24 12.07"/></svg>
+            Continue with Facebook
+          </button>
+          <div id="ba-oauth-note" style="font-size:10px;color:var(--muted2);text-align:center;margin-top:8px;line-height:1.5"></div>
+          <div style="flex:1"></div>
+          <div style="font-size:10.5px;color:var(--muted2);text-align:center;line-height:1.6">By signing up or logging in, I accept AGC Event App's<br><a style="color:var(--blue2);text-decoration:none">Terms of Service</a> and <a style="color:var(--blue2);text-decoration:none">Privacy Policy</a></div>
+        </div>
+      </div>
+
+      <!-- email form -->
+      <div id="ba-form-screen" style="position:absolute;inset:0;display:none;flex-direction:column;background:var(--bg)">
+        <div class="page-title-bar">
+          <button class="icon-btn" id="ba-form-back" aria-label="Back"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <h1 id="ba-title">Continue with Email</h1><span style="width:40px"></span>
+        </div>
+        <div class="pv-scroll" id="ba-form-wrap" style="padding-top:10px">
+          <div style="font-size:12px;color:var(--muted);margin:0 20px 18px;line-height:1.5" id="ba-sub">Optional — you can always keep buying tickets as a guest. Signing in just means your tickets follow you to any device.<br>New here? <a id="ba-toggle-signup" style="color:var(--blue2);cursor:pointer">Create an account</a> instead.</div>
+          <div class="field"><label for="ba-email">Email</label><input id="ba-email" type="email" placeholder="you@example.com" autocomplete="off"></div>
+          <div class="field"><label for="ba-pass">Password</label><input id="ba-pass" type="password" placeholder="••••••••" autocomplete="off"></div>
+          <div class="field" id="ba-confirm-wrap" style="display:none"><label for="ba-confirm">Confirm password</label><input id="ba-confirm" type="password" placeholder="••••••••" autocomplete="off"></div>
+          <div id="ba-err" style="display:none;margin-top:8px;font-size:11.5px;color:var(--heart);padding:0 20px"></div>
+          <div id="ba-info" style="display:none;margin-top:8px;font-size:11.5px;color:var(--okc);padding:0 20px"></div>
+        </div>
+        <div class="pv-cta"><button class="btn" id="ba-go" style="width:100%;padding:14px">Sign in</button></div>
+      </div>
+
+      <!-- signed-in: account summary -->
+      <div id="ba-signedin-screen" style="position:absolute;inset:0;display:none;flex-direction:column;background:var(--bg)">
+        <div class="page-title-bar">
+          <button class="icon-btn" data-close="buyerauth" aria-label="Back"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <h1>Account</h1><span style="width:40px"></span>
+        </div>
+        <div class="pv-scroll" id="ba-signedin-wrap" style="padding-top:8px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 20px 20px">
+            <div class="whoami-ava" id="ba-ava" style="width:56px;height:56px;font-size:18px"></div>
+            <div style="font-size:15px;font-weight:700" id="ba-email-display"></div>
+            <div style="font-size:11.5px;color:var(--muted)">Signed in · tickets sync to this account</div>
+          </div>
+          <div class="empty" id="ba-sync-note" style="padding:0 30px 10px"></div>
+        </div>
+        <div class="pv-cta"><button class="btn-danger" id="ba-signout" style="width:100%">Sign out</button></div>
+      </div>
+    </div>
+
     <!-- ========== SETTINGS ========== -->
     <div class="pv" id="settingsscr" role="dialog" aria-modal="true" aria-label="Settings">
       <div class="page-title-bar">
@@ -906,6 +972,12 @@
         <div id="prefs-list"></div>
         <div class="field" style="margin:6px 20px 0"><label for="pref-lang">Language</label>
           <select id="pref-lang"><option value="en">English</option><option value="fil">Filipino</option></select>
+        </div>
+        <div id="settings-account-row" style="display:none;padding:18px 20px 0">
+          <div class="lrow" style="margin:0">
+            <span class="lb">Account<span class="ls" style="display:block" id="settings-account-email"></span></span>
+            <button class="btn small" style="background:transparent;border:1px solid rgba(255,83,72,.45);color:var(--heart)" id="settings-signout">Sign out</button>
+          </div>
         </div>
         <div style="padding:22px 20px 0">
           <button class="btn-danger" id="wipe" style="width:100%">Clear app data</button>
@@ -1494,6 +1566,123 @@ $('ava-img').onclick=openAcct;
 $('ava-img2').style.cursor='pointer';
 $('ava-img2').onclick=openAcct;
 
+/* ---------- buyer sign-in (optional; guest checkout still works without it) ---------- */
+function syncBuyerAuthRow(){
+  const u=currentUser();
+  $('buyerauth-label').textContent = u ? u.email : 'Sign in';
+}
+async function syncBuyerAccountData(){
+  const u=currentUser();
+  if(!u) return;
+  if(u.name || u.city || u.photo_url){
+    state.profile={...state.profile, name:u.name||state.profile.name, city:u.city||state.profile.city, photo:u.photo_url||state.profile.photo};
+    applyProfile();
+  }
+  try{
+    const { data:rows } = await sb.from('bookings').select('*').eq('user_id',authSession.user.id);
+    (rows||[]).forEach(row=>{
+      if(!state.tickets.some(t=>t.code===row.code)){
+        state.tickets.push({id:row.event_id, qty:row.qty, total:row.total_amount, code:row.code, ts:new Date(row.created_at).getTime()});
+      }
+    });
+  }catch(e){ console.error('ticket sync failed',e); }
+  saveState(); syncBadge();
+  renderTickets(); renderFavs(); renderProfile();
+}
+function openBuyerAuth(){
+  const u=currentUser();
+  ['ba-landing','ba-form-screen','ba-signedin-screen'].forEach(id=>$(id).style.display='none');
+  if(u){
+    $('ba-signedin-screen').style.display='flex';
+    $('ba-ava').textContent=u.email.slice(0,2).toUpperCase();
+    $('ba-email-display').textContent=u.email;
+    $('ba-sync-note').innerHTML=`<span class="big-t">You're all set</span>Tickets you buy while signed in will follow you to any device. Buying as a guest still works too.`;
+  }else{
+    $('ba-landing').style.display='flex';
+    $('ba-hero-img').src=IMG.billboard;
+    $('ba-oauth-note').textContent='';
+  }
+  openPv('buyerauth');
+}
+$('ba-continue-email').onclick=()=>{
+  $('ba-landing').style.display='none';
+  $('ba-form-screen').style.display='flex';
+  $('ba-err').style.display='none'; $('ba-info').style.display='none';
+  $('ba-email').value=''; $('ba-pass').value=''; $('ba-confirm').value='';
+  state.baMode='signin'; syncBaMode();
+};
+$('ba-form-back').onclick=()=>{ $('ba-form-screen').style.display='none'; $('ba-landing').style.display='flex'; };
+async function tryOAuth(provider){
+  $('ba-oauth-note').textContent='Connecting…';
+  const { error } = await sb.auth.signInWithOAuth({ provider, options:{ redirectTo: location.origin+location.pathname } });
+  if(error) $('ba-oauth-note').textContent = provider+' sign-in isn’t set up yet on this project — the organizer needs to enable it in Supabase\'s dashboard first.';
+}
+$('ba-continue-google').onclick=()=>tryOAuth('google');
+$('ba-continue-facebook').onclick=()=>tryOAuth('facebook');
+
+state.baMode='signin';
+function syncBaMode(){
+  const su=state.baMode==='signup';
+  $('ba-title').textContent = su ? 'Create your account' : 'Sign in';
+  $('ba-confirm-wrap').style.display = su ? 'block' : 'none';
+  $('ba-go').textContent = su ? 'Create account' : 'Sign in';
+  $('ba-sub').innerHTML = su
+    ? 'Already have an account? <a id="ba-toggle-signup" style="color:var(--blue2);cursor:pointer">Sign in instead</a>.'
+    : 'Optional — you can always keep buying tickets as a guest. Signing in just means your tickets follow you to any device.<br>New here? <a id="ba-toggle-signup" style="color:var(--blue2);cursor:pointer">Create an account</a> instead.';
+  $('ba-toggle-signup').onclick=()=>{ state.baMode = su?'signin':'signup'; syncBaMode(); };
+  $('ba-err').style.display='none'; $('ba-info').style.display='none';
+}
+$('ba-go').onclick=async ()=>{
+  const email=$('ba-email').value.trim(), pass=$('ba-pass').value;
+  const btn=$('ba-go'); btn.disabled=true;
+  let res;
+  if(state.baMode==='signup'){
+    const confirm=$('ba-confirm').value;
+    if(pass.length<6){ $('ba-err').textContent='Password needs at least 6 characters.'; $('ba-err').style.display='block'; btn.disabled=false; return; }
+    if(pass!==confirm){ $('ba-err').textContent='Passwords don’t match.'; $('ba-err').style.display='block'; btn.disabled=false; return; }
+    const { data, error } = await sb.auth.signUp({ email, password:pass });
+    if(error) res={ok:false,msg:error.message};
+    else if(!data.session) res={ok:false,msg:'Account created — check your email to confirm it, then sign in.',info:true};
+    else{
+      authSession=data.session;
+      try{
+        await sb.rpc('update_own_profile',{p_name:state.profile.name, p_city:state.profile.city, p_photo_url:state.profile.photo||null});
+        const { data:prof } = await sb.from('profiles').select('email,is_admin,is_owner,name,city,photo_url').eq('id',data.user.id).single();
+        authProfile=prof;
+      }catch(e){}
+      res={ok:true};
+    }
+  }else{
+    const { data, error } = await sb.auth.signInWithPassword({ email, password:pass });
+    if(error) res={ok:false,msg:error.message};
+    else{
+      authSession=data.session;
+      try{
+        const { data:prof } = await sb.from('profiles').select('email,is_admin,is_owner,name,city,photo_url').eq('id',data.user.id).single();
+        authProfile=prof;
+      }catch(e){}
+      res={ok:true};
+    }
+  }
+  btn.disabled=false;
+  if(res.ok){ syncBuyerAuthRow(); await syncBuyerAccountData(); openBuyerAuth(); toast('Signed in'); }
+  else if(res.info){ $('ba-info').textContent=res.msg; $('ba-info').style.display='block'; }
+  else{ $('ba-err').textContent=res.msg||'Something went wrong.'; $('ba-err').style.display='block'; }
+};
+$('ba-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('ba-pass').focus();});
+$('ba-pass').addEventListener('keydown',e=>{if(e.key==='Enter')(state.baMode==='signup'?$('ba-confirm').focus():$('ba-go').click());});
+async function buyerSignOut(){
+  await sb.auth.signOut();
+  authSession=null; authProfile=null;
+  syncBuyerAuthRow();
+  toast('Signed out');
+}
+$('ba-signout').onclick=async ()=>{ await buyerSignOut(); closePv('buyerauth'); };
+$('settings-signout').onclick=async ()=>{
+  await buyerSignOut();
+  $('settings-account-row').style.display='none';
+};
+
 /* ---------- linked accounts ---------- */
 const PROVIDERS=[
   {id:'google',   n:'Google',    mark:'G',  bg:'#EDECEA', fg:'#1A1A1A'},
@@ -1575,16 +1764,20 @@ $('wipe').onclick=()=>{
 /* ---------- organizer console (Supabase-backed) ---------- */
 let authSession=null, authProfile=null;
 sb.auth.onAuthStateChange(async (event, session)=>{
+  const hadNoSession=!authSession;
   authSession=session;
   if(session){
     try{
-      const { data } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',session.user.id).single();
+      const { data } = await sb.from('profiles').select('email,is_admin,is_owner,name,city,photo_url').eq('id',session.user.id).single();
       authProfile=data||null;
     }catch(e){ authProfile=null; }
+    if(hadNoSession) syncBuyerAccountData();
   }else{
     authProfile=null;
   }
+  syncBuyerAuthRow();
 });
+function currentUser(){ return (authSession && authProfile) ? authProfile : null; }
 function currentSession(){
   return (authSession && authProfile && authProfile.is_admin) ? {email:authProfile.email, isOwner:!!authProfile.is_owner} : null;
 }
@@ -1978,13 +2171,20 @@ $('ee-save').onclick=async ()=>{
 document.querySelectorAll('.menu .mrow').forEach(b=>{
   b.onclick=()=>{
     const act=b.dataset.act;
-    if(act==='account') openAcct();
+    if(act==='buyerauth') openBuyerAuth();
+    else if(act==='account') openAcct();
     else if(act==='linked'){ renderLinked(); openPv('linked'); }
     else if(act==='following'){ renderFollowScr(); openPv('followscr'); }
     else if(act==='attending'){ renderAttendScr(); openPv('attendscr'); }
     else if(act==='issues') openSupport();
     else if(act==='manage') tryOpenConsole();
-    else if(act==='settings'){ renderPrefs(); $('pref-lang').value=state.prefs.lang; $('wipe').classList.remove('confirm'); $('wipe').textContent='Clear app data'; openPv('settingsscr'); }
+    else if(act==='settings'){
+      renderPrefs(); $('pref-lang').value=state.prefs.lang; $('wipe').classList.remove('confirm'); $('wipe').textContent='Clear app data';
+      const u=currentUser();
+      $('settings-account-row').style.display = u ? 'block' : 'none';
+      if(u) $('settings-account-email').textContent=u.email;
+      openPv('settingsscr');
+    }
   };
 });
 
@@ -2074,7 +2274,7 @@ function syncHeart(){
 function closeSheet(){ $('veil').classList.remove('open'); $('sheet').classList.remove('open'); }
 $('veil').onclick=closeSheet; $('d-back').onclick=closeSheet;
 $('d-heart').onclick=()=>toggleFav(state.sel.id);
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();closeTicket();['success','pay','addcard','passcode','support','console','acct','linked','followscr','attendscr','settingsscr','editevent','adminlogin'].forEach(id=>$(id).classList.remove('open'));}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();closeTicket();['success','pay','addcard','passcode','support','console','acct','linked','followscr','attendscr','settingsscr','editevent','adminlogin','buyerauth'].forEach(id=>$(id).classList.remove('open'));}});
 
 /* ---------- payment flow ---------- */
 let pay={ev:null, qty:1, total:0, method:null, agreed:false, pin:''};
@@ -2236,7 +2436,7 @@ async function completeBooking(){
     await sb.from('bookings').insert({
       event_id: pay.ev.id, code, qty: pay.qty, total_amount: pay.total,
       buyer_name: state.profile.name||null, buyer_email: state.profile.email||null,
-      device_id: getDeviceId()
+      device_id: getDeviceId(), user_id: currentUser() ? authSession.user.id : null
     });
     loadEventsFromSupabase(); // refresh seat counts in the background
   }catch(e){ console.error('booking sync to Supabase failed', e); }
