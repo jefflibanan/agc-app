@@ -318,17 +318,20 @@ async function loadEventsFromSupabase(){
 }
 
 /* ---------- auth (real Supabase Auth) ---------- */
+console.log('[auth-debug] script start, storage key present:', Object.keys(localStorage).some(k=>k.includes('sb-')));
 let authSession=null, authProfile=null, authReady=false, resolveAuthReady;
 const authReadyPromise=new Promise(res=>{ resolveAuthReady=res; });
 sb.auth.onAuthStateChange(async (event,session)=>{
+  console.log('[auth-debug] onAuthStateChange fired:', event, 'session:', !!session);
   authSession=session;
   if(session){
     try{
-      const { data } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',session.user.id).single();
+      const { data, error } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',session.user.id).single();
       authProfile=data||null;
-    }catch(e){ authProfile=null; }
+      console.log('[auth-debug] profile fetch result:', data, 'error:', error);
+    }catch(e){ authProfile=null; console.log('[auth-debug] profile fetch threw:', e); }
   }else authProfile=null;
-  if(!authReady){ authReady=true; resolveAuthReady(); }
+  if(!authReady){ authReady=true; resolveAuthReady(); console.log('[auth-debug] authReady resolved, authProfile:', authProfile); }
   else{ currentSession() ? showShell() : showLogin(); }
 });
 function currentSession(){
@@ -681,6 +684,8 @@ $('logout-btn').onclick=async ()=>{ await signOutAdmin(); showLogin(); };
 (async function boot(){
   await loadEventsFromSupabase();
   await authReadyPromise;
-  currentSession() ? showShell() : showLogin();
+  const cs=currentSession();
+  console.log('[auth-debug] boot deciding:', cs?'showShell':'showLogin', 'authSession:', !!authSession, 'authProfile:', authProfile);
+  cs ? showShell() : showLogin();
 })();
 </script>
