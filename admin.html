@@ -318,7 +318,8 @@ async function loadEventsFromSupabase(){
 }
 
 /* ---------- auth (real Supabase Auth) ---------- */
-let authSession=null, authProfile=null;
+let authSession=null, authProfile=null, authReady=false, resolveAuthReady;
+const authReadyPromise=new Promise(res=>{ resolveAuthReady=res; });
 sb.auth.onAuthStateChange(async (event,session)=>{
   authSession=session;
   if(session){
@@ -327,6 +328,8 @@ sb.auth.onAuthStateChange(async (event,session)=>{
       authProfile=data||null;
     }catch(e){ authProfile=null; }
   }else authProfile=null;
+  if(!authReady){ authReady=true; resolveAuthReady(); }
+  else{ currentSession() ? showShell() : showLogin(); }
 });
 function currentSession(){
   return (authSession && authProfile && authProfile.is_admin) ? {email:authProfile.email, isOwner:!!authProfile.is_owner} : null;
@@ -677,14 +680,7 @@ $('logout-btn').onclick=async ()=>{ await signOutAdmin(); showLogin(); };
 
 (async function boot(){
   await loadEventsFromSupabase();
-  const { data:{ session } } = await sb.auth.getSession();
-  if(session){
-    authSession=session;
-    try{
-      const { data:prof } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',session.user.id).single();
-      authProfile=prof||null;
-    }catch(e){ authProfile=null; }
-  }
+  await authReadyPromise;
   currentSession() ? showShell() : showLogin();
 })();
 </script>
