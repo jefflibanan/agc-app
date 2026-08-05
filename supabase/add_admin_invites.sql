@@ -24,11 +24,11 @@ create or replace function public.handle_new_user()
 returns trigger as $$
 begin
   insert into public.profiles (id, email, is_admin)
-  values (new.id, new.email, exists (select 1 from admin_invites where email = new.email));
-  delete from admin_invites where email = new.email;
+  values (new.id, new.email, exists (select 1 from public.admin_invites where email = new.email));
+  delete from public.admin_invites where email = new.email;
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 -- Public, aggregate-only "how many tickets sold per event" — safe for the anon key
 -- since it returns nothing but event_id + a count, no buyer details. Used to show

@@ -74,11 +74,11 @@ create or replace function public.handle_new_user()
 returns trigger as $$
 begin
   insert into public.profiles (id, email, is_admin)
-  values (new.id, new.email, exists (select 1 from admin_invites where email = new.email));
-  delete from admin_invites where email = new.email;
+  values (new.id, new.email, exists (select 1 from public.admin_invites where email = new.email));
+  delete from public.admin_invites where email = new.email;
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
@@ -146,12 +146,12 @@ create policy "admins select checkins" on checkins for select using (is_admin())
 create policy "admins update checkins" on checkins for update using (is_admin());
 create policy "admins delete checkins" on checkins for delete using (is_admin());
 
--- profiles: a user can see/update their own row; admins can see everyone's
+-- profiles: a user can see (but not edit — see set_admin_status() below) their own row;
+-- admins can see everyone's. There's deliberately no client-side UPDATE policy here:
+-- a policy that only checks "is this your row" doesn't restrict *which* columns you
+-- change, so it would let anyone flip their own is_admin to true from devtools.
 drop policy if exists "own profile" on profiles;
 create policy "own profile" on profiles for select using (auth.uid() = id);
-
-drop policy if exists "own profile update" on profiles;
-create policy "own profile update" on profiles for update using (auth.uid() = id);
 
 drop policy if exists "admins view all profiles" on profiles;
 create policy "admins view all profiles" on profiles for select using (is_admin());

@@ -497,6 +497,13 @@
 
   <div class="screens">
 
+    <!-- ========== LOADING ========== -->
+    <div id="loadscreen" style="position:absolute;inset:0;z-index:99;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px">
+      <div style="width:38px;height:38px;border-radius:50%;border:3px solid var(--line2);border-top-color:var(--blue);animation:spin 0.8s linear infinite"></div>
+      <div style="font-size:12px;color:var(--muted)">Loading events…</div>
+    </div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
     <!-- ========== HOME ========== -->
     <div class="screen active" id="scr-home">
       <div class="hdr">
@@ -789,12 +796,14 @@
           <div style="width:56px;height:56px;border-radius:16px;background:rgba(232,54,45,.13);border:1px solid rgba(255,97,87,.35);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:var(--blue2)">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/><path d="M17.5 11.5l1.6 1.6 3-3.2"/></svg>
           </div>
-          <div style="font-size:15px;font-weight:700">Sign in as an event organizer</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5">Only admins added by email + password can open the console.<br>Demo build — first launch seeds <b style="color:var(--txt)">admin@agc.ph</b> / <b style="color:var(--txt)">agcadmin123</b>.</div>
+          <div style="font-size:15px;font-weight:700" id="al-heading">Sign in as an event organizer</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5" id="al-sub">Real Supabase account required. Been invited by an admin? <a id="al-toggle-signup" style="color:var(--blue2);cursor:pointer">Create your account</a> instead.</div>
         </div>
-        <div class="field"><label for="al-email">Admin email</label><input id="al-email" type="email" placeholder="you@brand.ph" autocomplete="off"></div>
+        <div class="field"><label for="al-email">Email</label><input id="al-email" type="email" placeholder="you@brand.ph" autocomplete="off"></div>
         <div class="field"><label for="al-pass">Password</label><input id="al-pass" type="password" placeholder="••••••••" autocomplete="off"></div>
+        <div class="field" id="al-confirm-wrap" style="display:none"><label for="al-confirm">Confirm password</label><input id="al-confirm" type="password" placeholder="••••••••" autocomplete="off"></div>
         <div id="al-err" style="display:none;margin-top:8px;font-size:11.5px;color:var(--heart);padding:0 20px">Incorrect email or password.</div>
+        <div id="al-info" style="display:none;margin-top:8px;font-size:11.5px;color:var(--okc);padding:0 20px"></div>
       </div>
       <div class="pv-cta"><button class="btn" id="al-go" style="width:100%;padding:14px">Sign in</button></div>
     </div>
@@ -838,7 +847,6 @@
           <input id="ee-img" type="file" accept="image/*" style="padding:11px 14px">
           <div id="ee-img-wrap" style="display:none;margin-top:10px"><img id="ee-img-prev" alt="" style="width:100%;height:130px;object-fit:cover;border-radius:12px;border:1px solid var(--line2)"></div>
         </div>
-        <button class="btn-danger" id="ee-reset" style="width:100%;margin-top:18px">Reset to original</button>
       </div>
       <div class="pv-cta"><button class="btn" id="ee-save" style="width:100%;padding:14px">Save changes</button></div>
     </div>
@@ -953,11 +961,15 @@
 
 <p class="stage-caption">AGC Event App · booking app for <b>10 brands</b>, one ticket wallet</p>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/supabase.js"></script>
 <script>
 /* ---------- Supabase ---------- */
 const SUPABASE_URL = 'https://herebzgcxdoinkwmmhhy.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlcmViemdjeGRvaW5rd21taGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4OTc1MjQsImV4cCI6MjEwMTQ3MzUyNH0.KBYJabS8LR5u5SFLd3wZnLI2AymxzawsJqSDliDt_zg';
+if(!window.supabase){
+  document.getElementById('loadscreen').innerHTML = '<div style="padding:0 30px;text-align:center;color:var(--muted);font-size:12.5px;line-height:1.6">Couldn\'t load assets/supabase.js.<br>Open DevTools (F12) → Console and Network tabs and check what\'s failing.</div>';
+  throw new Error('window.supabase is undefined — assets/supabase.js did not load or did not execute');
+}
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 function getDeviceId(){
   let id=localStorage.getItem('frontrow_device_id');
@@ -1560,105 +1572,133 @@ $('wipe').onclick=()=>{
   location.reload();
 };
 
-/* ---------- organizer console ---------- */
-const K_DEMO='frontrow_admin_demo', K_CKS='frontrow_checkins', K_CUSTOM='frontrow_events_custom', K_OVR='frontrow_events_overrides',
-      K_ADMINS='frontrow_admins', K_SESSION='frontrow_admin_session';
-function adminsList(){
-  let a=lsGet(K_ADMINS,null);
-  if(!a){ a=[{email:'admin@agc.ph', password:'agcadmin123', owner:true, addedAt:Date.now()}]; lsSet(K_ADMINS,a); }
-  const owner=a.find(x=>x.owner);
-  if(owner && !owner.password){ owner.password='agcadmin123'; lsSet(K_ADMINS,a); }
-  return a;
+/* ---------- organizer console (Supabase-backed) ---------- */
+let authSession=null, authProfile=null;
+sb.auth.onAuthStateChange(async (event, session)=>{
+  authSession=session;
+  if(session){
+    try{
+      const { data } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',session.user.id).single();
+      authProfile=data||null;
+    }catch(e){ authProfile=null; }
+  }else{
+    authProfile=null;
+  }
+});
+function currentSession(){
+  return (authSession && authProfile && authProfile.is_admin) ? {email:authProfile.email, isOwner:!!authProfile.is_owner} : null;
 }
-function isAdminEmail(email){ return adminsList().some(a=>a.email.toLowerCase()===email.toLowerCase()); }
-const OWNER_EMAIL='admin@agc.ph', OWNER_PASS='agcadmin123';
-function checkCredentials(email,password){
-  email=(email||'').trim(); password=(password||'').trim();
-  if(email.toLowerCase()===OWNER_EMAIL && password===OWNER_PASS) return true;
-  return adminsList().some(a=>a.email.toLowerCase()===email.toLowerCase() && a.password===password);
+async function signInAdmin(email,password){
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if(error) return {ok:false, msg:error.message};
+  const { data:prof } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',data.user.id).single();
+  if(!prof || !prof.is_admin){ await sb.auth.signOut(); return {ok:false, msg:'That account exists but isn’t an admin.'}; }
+  authSession=data.session; authProfile=prof;
+  return {ok:true};
 }
-function currentSession(){ return lsGet(K_SESSION,null); }
-function setSession(email){ lsSet(K_SESSION,{email,since:Date.now()}); }
-function clearSession(){ localStorage.removeItem(K_SESSION); }
-const lsGet=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
-const lsSet=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
-const CON_NAMES=['Miguel Santos','Ana Reyes','Paolo Cruz','Bianca Lim','Jae Villanueva','Kat dela Rosa','Marco Tan','Iya Ramos'];
-state.conTab='overview'; state.conCk=null; state.conImg=null;
-function savePaused(){ lsSet('frontrow_paused',[...state.paused]); }
-function conBookings(){
-  const app=state.tickets.map(t=>({...t, buyer:'You (this device)', src:'app'}));
-  return app.concat(lsGet(K_DEMO,[])).filter(t=>EVENTS.some(e=>e.id===t.id)).sort((a,b)=>(b.ts||0)-(a.ts||0));
+async function signUpAdmin(email,password){
+  const { data, error } = await sb.auth.signUp({ email, password });
+  if(error) return {ok:false, msg:error.message};
+  if(!data.session) return {ok:false, msg:'Account created — check your email to confirm it, then sign in.', info:true};
+  const { data:prof } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',data.user.id).single();
+  if(!prof || !prof.is_admin){ await sb.auth.signOut(); return {ok:false, msg:'Account created, but this email wasn’t invited as an admin yet.'}; }
+  authSession=data.session; authProfile=prof;
+  return {ok:true};
 }
-const conGross=l=>l.reduce((s,t)=>s+(EVENTS.find(e=>e.id===t.id)?.price||0)*t.qty,0);
-const conSeats=l=>l.reduce((s,t)=>s+t.qty,0);
+async function signOutAdmin(){ await sb.auth.signOut(); authSession=null; authProfile=null; }
+
 function rerenderApp(){ renderHome(); renderExplore(); renderFavs(); renderTickets(); renderProfile(); }
 function openConsole(){ state.conTab='overview'; renderConsole(); openPv('console'); }
-function tryOpenConsole(){
+async function tryOpenConsole(){
+  if(!currentSession()){
+    const { data:{ session } } = await sb.auth.getSession();
+    if(session && !authSession){
+      authSession=session;
+      try{
+        const { data:prof } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',session.user.id).single();
+        authProfile=prof||null;
+      }catch(e){ authProfile=null; }
+    }
+  }
   if(currentSession()){ openConsole(); return; }
-  $('al-err').style.display='none';
-  $('al-email').value=''; $('al-pass').value='';
+  $('al-err').style.display='none'; $('al-info').style.display='none';
+  $('al-email').value=''; $('al-pass').value=''; $('al-confirm').value='';
+  state.alMode='signin'; syncAlMode();
   openPv('adminlogin');
 }
-$('al-go').onclick=()=>{
+state.alMode='signin';
+function syncAlMode(){
+  const su=state.alMode==='signup';
+  $('al-heading').textContent = su ? 'Create your organizer account' : 'Sign in as an event organizer';
+  $('al-confirm-wrap').style.display = su ? 'block' : 'none';
+  $('al-go').textContent = su ? 'Create account' : 'Sign in';
+  $('al-toggle-signup').textContent = su ? 'Sign in instead' : 'Create your account';
+  $('al-sub').innerHTML = su
+    ? 'Only works if an existing admin already invited this email. <a id="al-toggle-signup" style="color:var(--blue2);cursor:pointer">Sign in instead</a>.'
+    : 'Real Supabase account required. Been invited by an admin? <a id="al-toggle-signup" style="color:var(--blue2);cursor:pointer">Create your account</a> instead.';
+  $('al-toggle-signup').onclick=()=>{ state.alMode = su?'signin':'signup'; syncAlMode(); };
+  $('al-err').style.display='none'; $('al-info').style.display='none';
+}
+$('al-toggle-signup').onclick=()=>{ state.alMode='signup'; syncAlMode(); };
+$('al-go').onclick=async ()=>{
   const email=$('al-email').value.trim(), pass=$('al-pass').value;
-  if(email && pass && checkCredentials(email,pass)){
-    setSession(email);
-    closePv('adminlogin');
-    openConsole();
+  const btn=$('al-go'); btn.disabled=true;
+  let r;
+  if(state.alMode==='signup'){
+    const confirm=$('al-confirm').value;
+    if(pass.length<6){ $('al-err').textContent='Password needs at least 6 characters.'; $('al-err').style.display='block'; btn.disabled=false; return; }
+    if(pass!==confirm){ $('al-err').textContent='Passwords don’t match.'; $('al-err').style.display='block'; btn.disabled=false; return; }
+    r=await signUpAdmin(email,pass);
   }else{
-    $('al-err').style.display='block';
+    r=await signInAdmin(email,pass);
   }
+  btn.disabled=false;
+  if(r.ok){ closePv('adminlogin'); openConsole(); }
+  else if(r.info){ $('al-info').textContent=r.msg; $('al-info').style.display='block'; }
+  else{ $('al-err').textContent=r.msg||'Incorrect email or password.'; $('al-err').style.display='block'; }
 };
 $('al-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('al-pass').focus();});
-$('al-pass').addEventListener('keydown',e=>{if(e.key==='Enter')$('al-go').click();});
-$('con-logout').onclick=()=>{
-  clearSession();
+$('al-pass').addEventListener('keydown',e=>{if(e.key==='Enter')(state.alMode==='signup'?$('al-confirm').focus():$('al-go').click());});
+$('con-logout').onclick=async ()=>{
+  await signOutAdmin();
   closePv('console');
   toast('Signed out');
 };
 document.querySelectorAll('#con-seg button').forEach(b=>{
   b.onclick=()=>{ state.conTab=b.dataset.ct; renderConsole(); };
 });
-function renderConsole(){
+async function renderConsole(){
   document.querySelectorAll('#con-seg button').forEach(b=>b.classList.toggle('on',b.dataset.ct===state.conTab));
-  const body=$('con-body'); body.innerHTML='';
-  const bk=conBookings(), cks=lsGet(K_CKS,[]);
+  const body=$('con-body'); body.innerHTML='<div class="empty" style="padding:40px">Loading…</div>';
+  const sess=currentSession();
 
   if(state.conTab==='overview'){
-    const sess=currentSession();
+    const { data: bk } = await sb.from('bookings').select('*').eq('status','confirmed');
+    const { data: allEv } = await sb.from('events').select('id,brand_id,price,is_paused');
+    const bookings=bk||[], evs=allEv||[];
+    const gross=bookings.reduce((s,t)=>s+t.total_amount,0);
+    const seats=bookings.reduce((s,t)=>s+t.qty,0);
+    const evById=Object.fromEntries(evs.map(e=>[e.id,e]));
+    const paused=evs.filter(e=>e.is_paused).length;
+    let cksCount=0; try{ const {count}=await sb.from('checkins').select('*',{count:'exact',head:true}); cksCount=count||0; }catch(e){}
     body.innerHTML=`
       <div style="padding:0 20px 10px;font-size:11px;color:var(--muted)">Signed in as <b style="color:var(--txt)">${sess?sess.email:''}</b></div>
       <div class="con-stats">
-        <div class="cstat"><div class="k">Gross revenue</div><div class="v">${peso(conGross(bk))}</div><div class="d">${bk.length} bookings</div></div>
-        <div class="cstat"><div class="k">Tickets sold</div><div class="v">${conSeats(bk)}</div><div class="d">${bk.filter(t=>t.src==='app').length} from this device</div></div>
-        <div class="cstat"><div class="k">Events on sale</div><div class="v">${LIVE().length}</div><div class="d">${EVENTS.length-LIVE().length} paused</div></div>
-        <div class="cstat"><div class="k">Checked in</div><div class="v">${cks.length}</div><div class="d">at the gate</div></div>
+        <div class="cstat"><div class="k">Gross revenue</div><div class="v">${peso(gross)}</div><div class="d">${bookings.length} bookings</div></div>
+        <div class="cstat"><div class="k">Tickets sold</div><div class="v">${seats}</div><div class="d">across all devices</div></div>
+        <div class="cstat"><div class="k">Events on sale</div><div class="v">${evs.length-paused}</div><div class="d">${paused} paused</div></div>
+        <div class="cstat"><div class="k">Checked in</div><div class="v">${cksCount}</div><div class="d">at the gate</div></div>
       </div>
       <div class="ph2" style="padding:0 20px">Revenue by brand</div>
-      <div style="padding:6px 20px" id="con-bars"></div>
-      <div style="display:flex;gap:10px;padding:10px 20px 0">
-        <button class="btn" id="con-seed" style="flex:1;padding:12px">Generate sample sales</button>
-        <button class="btn-danger" id="con-clear" style="flex:1">Clear samples</button>
-      </div>`;
+      <div style="padding:6px 20px" id="con-bars"></div>`;
     const byBrand={};
-    bk.forEach(t=>{const e=EVENTS.find(x=>x.id===t.id); byBrand[e.b]=(byBrand[e.b]||0)+e.price*t.qty;});
+    bookings.forEach(t=>{const e=evById[t.event_id]; if(!e)return; byBrand[e.brand_id]=(byBrand[e.brand_id]||0)+t.total_amount;});
     const rows=Object.entries(byBrand).sort((a,b)=>b[1]-a[1]), max=rows[0]?.[1]||1;
     $('con-bars').innerHTML=rows.length?rows.map(([b,v])=>{
       const c=BRAND_COLORS[b]||'var(--blue2)';
       return `<div class="cbar"><span class="l"><span class="dot" style="background:${c}"></span>${BRANDS[b].name}</span><span class="t"><span class="f" style="width:${Math.max(4,v/max*100)}%;background:${c}"></span></span><span class="v">${peso(v)}</span></div>`;
     }).join('')
-      :'<div class="empty" style="padding:18px">No sales yet — book in the app or generate samples.</div>';
-    $('con-seed').onclick=()=>{
-      const demo=lsGet(K_DEMO,[]);
-      for(let i=0;i<15;i++){
-        const e=LIVE()[Math.floor(Math.random()*LIVE().length)];
-        demo.push({id:e.id, qty:1+Math.floor(Math.random()*4), code:newCode(),
-          ts:Date.now()-Math.floor(Math.random()*6.048e8),
-          buyer:CON_NAMES[Math.floor(Math.random()*CON_NAMES.length)]});
-      }
-      lsSet(K_DEMO,demo); renderConsole();
-    };
-    $('con-clear').onclick=()=>{ lsSet(K_DEMO,[]); renderConsole(); };
+      :'<div class="empty" style="padding:18px">No sales yet — bookings made in the app will show up here.</div>';
   }
 
   else if(state.conTab==='events'){
@@ -1680,38 +1720,37 @@ function renderConsole(){
         <button class="btn" id="ne-save" style="width:100%;padding:13px;margin-top:16px">Publish event</button>
       </div>
       <div class="ph2" style="padding:16px 20px 0">All events</div>
-      <div id="con-evlist" style="padding-top:8px"></div>`;
-    const list=$('con-evlist');
-    const customIds=new Set(lsGet(K_CUSTOM,[]).map(c=>c.id));
-    const ovrIds=new Set(Object.keys(lsGet(K_OVR,{})).map(Number));
-    EVENTS.slice().sort((a,b)=>a.id-b.id).forEach(e=>{
-      const isP=state.paused.has(e.id), sold=conSeats(conBookings().filter(t=>t.id===e.id));
-      const isNew=customIds.has(e.id), isEdited=ovrIds.has(e.id);
+      <div id="con-evlist" style="padding-top:8px"><div class="empty">Loading…</div></div>`;
+    const { data: rows } = await sb.from('events').select('*').order('id');
+    const { data: counts } = await sb.rpc('get_event_seat_counts');
+    const soldMap=Object.fromEntries((counts||[]).map(c=>[c.event_id,c.sold]));
+    const list=$('con-evlist'); list.innerHTML='';
+    (rows||[]).forEach(e=>{
+      const isP=e.is_paused, sold=soldMap[e.id]||0;
       const d=document.createElement('div');
       d.className='crow';
       d.innerHTML=`
-        <img src="${imgOf(e)}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0" alt="">
-        <span class="cl"><span class="ct">${e.title}${isNew?' <span class="chip-st red">NEW</span>':''}${(!isNew&&isEdited)?' <span class="chip-st pend">EDITED</span>':''}</span><span class="cs" style="display:block">${BRANDS[e.b].name} · ${e.date} · ${peso(e.price)} · ${sold} sold</span></span>
+        <img src="${e.image_url||IMG[e.brand_id]||''}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0" alt="">
+        <span class="cl"><span class="ct">${e.title}</span><span class="cs" style="display:block">${BRANDS[e.brand_id].name} · ${e.event_date} · ${peso(e.price)} · ${sold} sold</span></span>
         <span class="chip-st ${isP?'up':'ok'}">${isP?'PAUSED':'ON SALE'}</span>
         <button class="btn small" style="background:var(--card2);border:1px solid var(--line2);color:var(--txt)" data-edit="${e.id}">Edit</button>
-        <button class="btn small" style="background:var(--card2);border:1px solid var(--line2);color:var(--txt)" data-p="${e.id}">${isP?'Resume':'Pause'}</button>
-        ${isNew?`<button class="btn small" style="background:transparent;border:1px solid rgba(255,83,72,.45);color:var(--heart)" data-x="${e.id}">✕</button>`:''}`;
+        <button class="btn small" style="background:var(--card2);border:1px solid var(--line2);color:var(--txt)" data-p="${e.id}" data-cur="${isP}">${isP?'Resume':'Pause'}</button>
+        <button class="btn small" style="background:transparent;border:1px solid rgba(255,83,72,.45);color:var(--heart)" data-x="${e.id}">✕</button>`;
       list.appendChild(d);
     });
     list.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEditEvent(+b.dataset.edit));
-    list.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{
-      const id=+b.dataset.p;
-      state.paused.has(id)?state.paused.delete(id):state.paused.add(id);
-      savePaused(); rerenderApp(); renderConsole();
+    list.querySelectorAll('[data-p]').forEach(b=>b.onclick=async ()=>{
+      const id=+b.dataset.p, cur=b.dataset.cur==='true';
+      const { error } = await sb.from('events').update({is_paused:!cur}).eq('id',id);
+      if(error){ toast('Could not update: '+error.message); return; }
+      await loadEventsFromSupabase(); rerenderApp(); renderConsole();
     });
-    list.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{
+    list.querySelectorAll('[data-x]').forEach(b=>b.onclick=async ()=>{
       const id=+b.dataset.x;
-      lsSet(K_CUSTOM,lsGet(K_CUSTOM,[]).filter(c=>c.id!==id));
-      const ov=lsGet(K_OVR,{}); delete ov[id]; lsSet(K_OVR,ov);
-      const i=EVENTS.findIndex(e=>e.id===id);
-      if(i>-1)EVENTS.splice(i,1);
-      state.paused.delete(id); savePaused();
-      rerenderApp(); renderConsole();
+      if(!confirm('Delete this event permanently? This cannot be undone.')) return;
+      const { error } = await sb.from('events').delete().eq('id',id);
+      if(error){ toast('Could not delete: '+error.message); return; }
+      await loadEventsFromSupabase(); rerenderApp(); renderConsole();
     });
     state.conImg=null;
     $('ne-img').addEventListener('change',ev=>{
@@ -1734,38 +1773,41 @@ function renderConsole(){
       };
       rd.readAsDataURL(f);
     });
-    $('ne-save').onclick=()=>{
+    $('ne-save').onclick=async ()=>{
       const title=$('ne-title').value.trim(), b=$('ne-brand').value, dt=$('ne-date').value,
             venue=$('ne-venue').value.trim(), price=parseInt($('ne-price').value,10);
       if(!title||!dt||!venue||!(price>=0)){ toast('Fill in title, date, venue, and price'); return; }
-      const d=new Date(dt+'T00:00:00');
-      const mo=d.toLocaleDateString('en-US',{month:'short'}), da=String(d.getDate());
-      const custom=lsGet(K_CUSTOM,[]);
-      const id=Math.max(100,...EVENTS.map(e=>e.id))+1;
-      const rec={id, b, title, date:mo+' '+da, venue, price, time:'7:00 PM onwards',
-        about:'Newly announced — more details soon.', booked:String(Math.floor(Math.random()*400+40)), img:state.conImg};
-      custom.push(rec); lsSet(K_CUSTOM,custom);
-      EVENTS.push({...rec, mo, da, feat:false});
+      const btn=$('ne-save'); btn.disabled=true; btn.textContent='Publishing…';
+      const { error } = await sb.from('events').insert({
+        brand_id:b, title, event_date:dt, venue, price,
+        doors_time:'7:00 PM onwards', description:'Newly announced — more details soon.',
+        image_url: state.conImg||null, featured:false
+      });
+      btn.disabled=false; btn.textContent='Publish event';
+      if(error){ toast('Could not publish: '+error.message); return; }
       state.conImg=null;
-      rerenderApp(); renderConsole();
+      await loadEventsFromSupabase(); rerenderApp(); renderConsole();
       toast('“'+title+'” is now live in the app');
     };
   }
 
   else if(state.conTab==='bookings'){
-    const ckSet=new Set(cks.map(c=>c.code));
-    body.innerHTML=`<div class="ph2" style="padding:0 20px">${bk.length} bookings · ${conSeats(bk)} tickets · ${peso(conGross(bk))} gross</div><div id="con-bklist" style="padding-top:8px"></div>`;
+    const { data: bk } = await sb.from('bookings').select('*').order('created_at',{ascending:false}).limit(60);
+    const { data: cks } = await sb.from('checkins').select('booking_id');
+    const ckSet=new Set((cks||[]).map(c=>c.booking_id));
+    const bookings=bk||[];
+    const gross=bookings.reduce((s,t)=>s+t.total_amount,0), seats=bookings.reduce((s,t)=>s+t.qty,0);
+    body.innerHTML=`<div class="ph2" style="padding:0 20px">${bookings.length} bookings · ${seats} tickets · ${peso(gross)} gross</div><div id="con-bklist" style="padding-top:8px"></div>`;
     const list=$('con-bklist');
-    if(!bk.length) list.innerHTML='<div class="empty">No bookings yet — buy a ticket in the app or generate sample sales from Overview.</div>';
-    bk.slice(0,40).forEach(t=>{
-      const e=EVENTS.find(x=>x.id===t.id);
+    if(!bookings.length){ list.innerHTML='<div class="empty">No bookings yet — buy a ticket in the app.</div>'; }
+    bookings.forEach(t=>{
+      const e=EVENTS.find(x=>x.id===t.event_id);
       const d=document.createElement('div');
       d.className='crow';
       d.innerHTML=`
-        <span class="cl"><span class="ct">${e.title}</span>
-        <span class="cs" style="display:block"><span class="codechip">${t.code||'—'}</span> · ${t.buyer||'guest'} · ${t.qty} × ${peso(e.price)}</span></span>
-        <span class="chip-st ${t.src==='app'?'ok':'up'}">${t.src==='app'?'LIVE':'SAMPLE'}</span>
-        <span class="chip-st ${ckSet.has(t.code)?'ok':'pend'}">${ckSet.has(t.code)?'IN':'OUT'}</span>`;
+        <span class="cl"><span class="ct">${e?e.title:'Event #'+t.event_id}</span>
+        <span class="cs" style="display:block"><span class="codechip">${t.code}</span> · ${t.buyer_name||'guest'} · ${t.qty} × ${peso(t.total_amount/t.qty)}</span></span>
+        <span class="chip-st ${ckSet.has(t.id)?'ok':'pend'}">${ckSet.has(t.id)?'IN':'OUT'}</span>`;
       list.appendChild(d);
     });
   }
@@ -1779,29 +1821,30 @@ function renderConsole(){
       </div>
       <div id="ck-result"></div>
       <div class="ph2" style="padding:16px 20px 0">Checked in</div>
-      <div id="ck-list" style="padding-top:8px"></div>`;
+      <div id="ck-list" style="padding-top:8px"><div class="empty">Loading…</div></div>`;
     if(state.conCk){ $('ck-result').innerHTML=`<div class="ckr ${state.conCk.cls}">${state.conCk.msg}</div>`; }
-    const list=$('ck-list');
-    if(!cks.length) list.innerHTML='<div class="empty">No check-ins yet — enter a booking code from any ticket.</div>';
-    cks.slice().reverse().forEach(c=>{
+    const { data: cks } = await sb.from('checkins').select('*, bookings(code,qty,event_id)').order('checked_in_at',{ascending:false});
+    const list=$('ck-list'); list.innerHTML='';
+    if(!cks || !cks.length){ list.innerHTML='<div class="empty">No check-ins yet — enter a booking code from any ticket.</div>'; }
+    (cks||[]).forEach(c=>{
+      const e=EVENTS.find(x=>x.id===c.bookings?.event_id);
       const d=document.createElement('div');
       d.className='crow';
-      d.innerHTML=`<span class="cl"><span class="ct">${c.event}</span><span class="cs" style="display:block"><span class="codechip">${c.code}</span> · ${c.qty} ticket${c.qty!==1?'s':''} · ${new Date(c.ts).toLocaleTimeString()}</span></span><span class="chip-st ok">IN</span>`;
+      d.innerHTML=`<span class="cl"><span class="ct">${e?e.title:'Event'}</span><span class="cs" style="display:block"><span class="codechip">${c.bookings?.code||''}</span> · ${c.bookings?.qty||''} ticket${c.bookings?.qty!==1?'s':''} · ${new Date(c.checked_in_at).toLocaleTimeString()}</span></span><span class="chip-st ok">IN</span>`;
       list.appendChild(d);
     });
-    const go=()=>{
+    const go=async ()=>{
       const code=$('ck-in').value.trim().toUpperCase();
       if(!code) return;
-      const hit=conBookings().find(t=>(t.code||'').toUpperCase()===code);
-      const cur=lsGet(K_CKS,[]);
-      if(!hit) state.conCk={cls:'bad',msg:`<b>✕ Not found.</b> No booking matches <span class="codechip">${code}</span>.`};
-      else if(cur.some(c=>c.code===hit.code)) state.conCk={cls:'dup',msg:`<b>⚠ Already used.</b> <span class="codechip">${hit.code}</span> was checked in earlier — each code admits once.`};
-      else{
-        const e=EVENTS.find(x=>x.id===hit.id);
-        cur.push({code:hit.code,event:e.title,qty:hit.qty,ts:Date.now()});
-        lsSet(K_CKS,cur);
-        state.conCk={cls:'good',msg:`<b>✓ Welcome in!</b> ${e.title} — ${hit.qty} ticket${hit.qty!==1?'s':''} · ${hit.buyer||'guest'}.`};
-      }
+      const { data: hits, error } = await sb.rpc('find_booking_by_code',{p_code:code});
+      const hit=(hits&&hits[0])||null;
+      if(error||!hit){ state.conCk={cls:'bad',msg:`<b>✕ Not found.</b> No booking matches <span class="codechip">${code}</span>.`}; renderConsole(); return; }
+      const { data: dup } = await sb.from('checkins').select('id').eq('booking_id',hit.id).maybeSingle();
+      if(dup){ state.conCk={cls:'dup',msg:`<b>⚠ Already used.</b> <span class="codechip">${hit.code}</span> was checked in earlier — each code admits once.`}; renderConsole(); return; }
+      const { error: insErr } = await sb.from('checkins').insert({booking_id:hit.id});
+      const e=EVENTS.find(x=>x.id===hit.event_id);
+      if(insErr){ state.conCk={cls:'bad',msg:'Could not check in: '+insErr.message}; }
+      else{ state.conCk={cls:'good',msg:`<b>✓ Welcome in!</b> ${e?e.title:'Event'} — ${hit.qty} ticket${hit.qty!==1?'s':''} · ${hit.buyer_name||'guest'}.`}; }
       renderConsole();
     };
     $('ck-go').onclick=go;
@@ -1809,49 +1852,60 @@ function renderConsole(){
   }
 
   else{ /* admins */
-    const admins=adminsList(), sess=currentSession();
+    const { data: admins } = await sb.from('profiles').select('email,is_admin,is_owner').eq('is_admin',true).order('is_owner',{ascending:false});
+    const { data: invites } = await sb.from('admin_invites').select('email,created_at').order('created_at',{ascending:false});
     body.innerHTML=`
       <div class="ph2" style="padding:0 20px">Signed in</div>
       <div class="crow" style="align-items:center">
-        <span class="cl"><span class="ct">${sess?sess.email:'—'}</span><span class="cs" style="display:block">This device's active organizer session</span></span>
+        <span class="cl"><span class="ct">${sess?sess.email:'—'}</span><span class="cs" style="display:block">Real Supabase account · Row Level Security enforced</span></span>
       </div>
-      <div class="ph2" style="padding:16px 20px 0">Add an admin</div>
-      <div style="padding:4px 20px 0;font-size:10.5px;color:var(--muted2);line-height:1.5">Demo build — this is a client-side check, not real security. A production console needs server-side auth.</div>
-      <div style="display:flex;flex-direction:column;gap:8px;padding:8px 20px 0">
-        <input id="ad-email" type="email" placeholder="teammate@brand.ph" style="background:var(--card);border:1px solid var(--line);border-radius:100px;padding:12px 16px;color:var(--txt);font-size:12.5px;font-family:var(--sans);outline:none">
-        <input id="ad-pass" type="password" placeholder="Set a password" style="background:var(--card);border:1px solid var(--line);border-radius:100px;padding:12px 16px;color:var(--txt);font-size:12.5px;font-family:var(--sans);outline:none">
-        <button class="btn small" id="ad-add" style="padding:11px 18px">Add admin</button>
+      <div class="ph2" style="padding:16px 20px 0">Invite an admin</div>
+      <div style="padding:4px 20px 0;font-size:10.5px;color:var(--muted2);line-height:1.5">They'll create their own account (and their own password) once invited — you never set it for them.</div>
+      <div style="display:flex;gap:10px;padding:8px 20px 0">
+        <input id="ad-email" type="email" placeholder="teammate@brand.ph" style="flex:1;background:var(--card);border:1px solid var(--line);border-radius:100px;padding:12px 16px;color:var(--txt);font-size:12.5px;font-family:var(--sans);outline:none">
+        <button class="btn small" id="ad-add" style="padding:11px 18px">Invite</button>
       </div>
-      <div class="ph2" style="padding:16px 20px 0">All admins</div>
-      <div id="ad-list" style="padding-top:8px"></div>`;
+      <div class="ph2" style="padding:16px 20px 0">Pending invites</div>
+      <div id="inv-list" style="padding-top:4px"></div>
+      <div class="ph2" style="padding:16px 20px 0">Admins</div>
+      <div id="ad-list" style="padding-top:4px"></div>`;
+    const invList=$('inv-list');
+    if(!invites || !invites.length){ invList.innerHTML='<div class="empty" style="padding:14px">No pending invites.</div>'; }
+    (invites||[]).forEach(inv=>{
+      const d=document.createElement('div'); d.className='crow';
+      d.innerHTML=`<span class="cl"><span class="ct">${inv.email}</span><span class="cs" style="display:block">Invited, not signed up yet</span></span>
+        <button class="btn-danger" style="padding:8px 14px;font-size:11.5px" data-cancel="${inv.email}">Cancel</button>`;
+      invList.appendChild(d);
+    });
+    invList.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=async ()=>{
+      await sb.from('admin_invites').delete().eq('email',b.dataset.cancel);
+      renderConsole();
+    });
     const list=$('ad-list');
-    admins.forEach(a=>{
-      const d=document.createElement('div');
-      d.className='crow';
+    (admins||[]).forEach(a=>{
+      const d=document.createElement('div'); d.className='crow';
       d.innerHTML=`<span class="cl"><span class="ct">${a.email}</span></span>
-        <span class="chip-st ${a.owner?'red':'up'}">${a.owner?'OWNER':'ADMIN'}</span>
-        ${a.owner?'':`<button class="btn-danger" style="padding:8px 14px;font-size:11.5px" data-rm="${a.email}">Remove</button>`}`;
+        <span class="chip-st ${a.is_owner?'red':'up'}">${a.is_owner?'OWNER':'ADMIN'}</span>
+        ${a.is_owner?'':`<button class="btn-danger" style="padding:8px 14px;font-size:11.5px" data-rm="${a.email}">Remove</button>`}`;
       list.appendChild(d);
     });
-    list.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{
+    list.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async ()=>{
       const email=b.dataset.rm;
       if(sess && sess.email.toLowerCase()===email.toLowerCase()){ toast('You can’t remove the admin you’re signed in as'); return; }
-      lsSet(K_ADMINS, adminsList().filter(a=>a.email.toLowerCase()!==email.toLowerCase()));
+      const { error } = await sb.rpc('set_admin_status',{target_email:email, new_status:false});
+      if(error){ toast('Could not remove: '+error.message); return; }
       renderConsole();
     });
-    $('ad-add').onclick=()=>{
-      const email=$('ad-email').value.trim(), pass=$('ad-pass').value;
+    $('ad-add').onclick=async ()=>{
+      const email=$('ad-email').value.trim();
       if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast('Enter a valid email address'); return; }
-      if(pass.length<6){ toast('Password needs at least 6 characters'); return; }
-      const list2=adminsList();
-      if(list2.some(a=>a.email.toLowerCase()===email.toLowerCase())){ toast('Already an admin'); return; }
-      list2.push({email, password:pass, owner:false, addedAt:Date.now()});
-      lsSet(K_ADMINS,list2);
-      toast(email+' added as admin');
+      const { error } = await sb.from('admin_invites').insert({email, invited_by:authSession?.user?.id});
+      if(error){ toast(error.code==='23505' ? 'Already invited' : 'Could not invite: '+error.message); return; }
+      $('ad-email').value='';
+      toast(email+' invited — they can now sign up');
       renderConsole();
     };
-    $('ad-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('ad-pass').focus();});
-    $('ad-pass').addEventListener('keydown',e=>{if(e.key==='Enter')$('ad-add').click();});
+    $('ad-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('ad-add').click();});
   }
 }
 
@@ -1902,33 +1956,22 @@ $('ee-img').addEventListener('change',ev=>{
   };
   rd.readAsDataURL(f);
 });
-$('ee-save').onclick=()=>{
+$('ee-save').onclick=async ()=>{
   const title=$('ee-title').value.trim(), b=$('ee-brand').value, dt=$('ee-date').value,
         venue=$('ee-venue').value.trim(), price=parseInt($('ee-price').value,10),
         time=$('ee-time').value.trim(), about=$('ee-about').value.trim();
   if(!title||!dt||!venue||!(price>=0)){ toast('Fill in title, date, venue, and price'); return; }
-  const d=new Date(dt+'T00:00:00');
-  const mo=d.toLocaleDateString('en-US',{month:'short'}), da=String(d.getDate());
-  const patch={title, b, date:mo+' '+da, mo, da, venue, price};
-  if(time) patch.time=time;
-  if(about) patch.about=about;
-  if(eeImg) patch.img=eeImg;
-  const ov=lsGet(K_OVR,{});
-  ov[eeId]={...(ov[eeId]||{}), ...patch};
-  lsSet(K_OVR,ov);
-  const ev=EVENTS.find(x=>x.id===eeId);
-  if(ev) Object.assign(ev,patch);
+  const patch={ title, brand_id:b, event_date:dt, venue, price };
+  if(time) patch.doors_time=time;
+  if(about) patch.description=about;
+  if(eeImg) patch.image_url=eeImg;
+  const btn=$('ee-save'); btn.disabled=true; btn.textContent='Saving…';
+  const { error } = await sb.from('events').update(patch).eq('id',eeId);
+  btn.disabled=false; btn.textContent='Save changes';
+  if(error){ toast('Could not save: '+error.message); return; }
   closePv('editevent');
-  rerenderApp(); renderConsole();
+  await loadEventsFromSupabase(); rerenderApp(); renderConsole();
   toast('“'+title+'” updated');
-};
-$('ee-reset').onclick=()=>{
-  const b=$('ee-reset');
-  if(!b.classList.contains('confirm')){ b.classList.add('confirm'); b.textContent='Tap again to discard your edits'; return; }
-  const ov=lsGet(K_OVR,{});
-  if(ov[eeId]){ delete ov[eeId]; lsSet(K_OVR,ov); }
-  closePv('editevent');
-  location.reload();
 };
 
 /* ---------- menu wiring ---------- */
@@ -2180,15 +2223,23 @@ function keyPress(k){
   if(pay.pin.length===4) setTimeout(completeBooking,320);
 }
 
-function completeBooking(){
-  const found=state.tickets.find(t=>t.id===pay.ev.id);
-  found?found.qty+=pay.qty:state.tickets.push({id:pay.ev.id, qty:pay.qty, code:newCode(), ts:Date.now()});
+async function completeBooking(){
+  const code=newCode();
+  state.tickets.push({id:pay.ev.id, qty:pay.qty, code, ts:Date.now()});
   saveState(); syncBadge();
   renderTickets(); renderProfile();
   $('passcode').classList.remove('open');
   $('pay').classList.remove('open');
   closeSheet();
   $('success').classList.add('open');
+  try{
+    await sb.from('bookings').insert({
+      event_id: pay.ev.id, code, qty: pay.qty, total_amount: pay.total,
+      buyer_name: state.profile.name||null, buyer_email: state.profile.email||null,
+      device_id: getDeviceId()
+    });
+    loadEventsFromSupabase(); // refresh seat counts in the background
+  }catch(e){ console.error('booking sync to Supabase failed', e); }
 }
 
 $('cta').onclick=openPay;
@@ -2221,7 +2272,6 @@ const DEFAULT_AVA=(function(){
   return url;
 })();
 
-loadState(); syncBadge(); applyProfile(); applyTheme();
 /* ---------- horizontal rails: mouse-wheel + click-drag scrolling for desktop ---------- */
 function makeHScroll(el){
   if(!el || el.dataset.hscroll) return;
@@ -2255,5 +2305,16 @@ function makeHScroll(el){
 }
 ['rail','home-cats','explore-cats','chat-chips'].forEach(id=>makeHScroll($(id)));
 
-renderHome(); renderExplore(); renderTickets(); renderFavs(); renderProfile();
+(async function boot(){
+  try{
+    await loadEventsFromSupabase();
+  }catch(e){
+    console.error('Could not reach Supabase', e);
+    $('loadscreen').innerHTML = '<div style="padding:0 30px;text-align:center;color:var(--muted);font-size:12.5px;line-height:1.6">Couldn\'t reach the database.<br>Check your connection and reload.</div>';
+    return;
+  }
+  loadState(); syncBadge(); applyProfile(); applyTheme();
+  renderHome(); renderExplore(); renderTickets(); renderFavs(); renderProfile();
+  $('loadscreen').style.display='none';
+})();
 </script>

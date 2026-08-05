@@ -137,11 +137,13 @@
     <div class="login-icon">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/><path d="M17.5 11.5l1.6 1.6 3-3.2"/></svg>
     </div>
-    <h1>Organizer sign-in</h1>
-    <p>Only admins added by email + password can open this console.<br>Demo build — first launch seeds <b style="color:var(--txt)">admin@agc.ph</b> / <b style="color:var(--txt)">agcadmin123</b>.</p>
-    <div class="fld"><label for="login-email">Admin email</label><input id="login-email" type="email" placeholder="you@brand.ph" autocomplete="off"></div>
+    <h1 id="login-heading">Organizer sign-in</h1>
+    <p id="login-sub">Real Supabase account required. Been invited by an admin? <a id="login-toggle-signup" style="color:var(--red2);cursor:pointer">Create your account</a> instead.</p>
+    <div class="fld"><label for="login-email">Email</label><input id="login-email" type="email" placeholder="you@brand.ph" autocomplete="off"></div>
     <div class="fld"><label for="login-pass">Password</label><input id="login-pass" type="password" placeholder="••••••••" autocomplete="off"></div>
+    <div class="fld" id="login-confirm-wrap" style="display:none"><label for="login-confirm">Confirm password</label><input id="login-confirm" type="password" placeholder="••••••••" autocomplete="off"></div>
     <div class="login-err" id="login-err">Incorrect email or password.</div>
+    <div class="login-err" id="login-info" style="color:var(--ok)"></div>
     <button class="btn" id="login-go" style="width:100%;padding:12px">Sign in</button>
   </div>
 </div>
@@ -178,7 +180,6 @@
         <div><h1>Dashboard</h1><div class="sub" id="dash-sub"></div></div>
         <div class="top-actions">
           <button class="btn ghost" id="refresh">↻ Refresh</button>
-          <button class="btn" id="seed">Generate sample bookings</button>
         </div>
       </div>
       <div class="stats" id="stat-cards"></div>
@@ -215,7 +216,6 @@
     <section class="view" id="v-book">
       <div class="topbar">
         <div><h1>Bookings</h1><div class="sub" id="book-sub"></div></div>
-        <div class="top-actions"><button class="btn danger small" id="clear-samples">Clear sample bookings</button></div>
       </div>
       <div class="panel"><div class="twrap"><table id="book-tbl"></table></div></div>
     </section>
@@ -241,13 +241,15 @@
         <div><h1>Admins</h1><div class="sub">Only these email addresses can sign in to this console</div></div>
       </div>
       <div class="panel">
-        <h2>Add an admin</h2>
-        <div class="hint" style="margin-bottom:10px">Demo build — this is a client-side check, not real security. A production console needs server-side auth.</div>
+        <h2>Invite an admin</h2>
+        <div class="hint" style="margin-bottom:10px">They'll create their own account (and their own password) once invited — you never set it for them.</div>
         <div class="admin-add">
           <input id="admin-email" type="email" placeholder="teammate@brand.ph">
-          <input id="admin-pass" type="password" placeholder="Set a password">
-          <button class="btn" id="admin-add-btn">Add admin</button>
+          <button class="btn" id="admin-add-btn">Invite</button>
         </div>
+        <div class="hint" style="margin:14px 0 8px">Pending invites</div>
+        <div id="invite-list"></div>
+        <div class="hint" style="margin:14px 0 8px">Admins</div>
         <div id="admin-list"></div>
       </div>
     </section>
@@ -270,7 +272,6 @@
       <div class="fld wide" id="e-img-wrap" style="display:none"><img id="e-img-prev" alt="" style="width:100%;max-width:340px;height:150px;object-fit:cover;border-radius:12px;border:1px solid var(--line2)"></div>
       <div class="modal-foot">
         <button class="btn" id="e-save">Save changes</button>
-        <button class="btn ghost" id="e-reset">Reset to original</button>
         <button class="btn ghost" id="e-cancel">Cancel</button>
         <span class="frm-msg" id="e-msg"></span>
       </div>
@@ -278,84 +279,83 @@
   </div>
 </div>
 
+<script src="assets/supabase.js"></script>
 <script>
-/* Same catalog as the app (id/brand/price/date must match index.html) */
+const $=id=>document.getElementById(id);
+if(!window.supabase){
+  document.body.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:30px;text-align:center;color:#9C9CA3;font-family:sans-serif;font-size:13px;line-height:1.6">Couldn\'t load assets/supabase.js.<br>Open DevTools (F12) → Console/Network and check what\'s failing.</div>';
+  throw new Error('window.supabase is undefined');
+}
+const SUPABASE_URL='https://herebzgcxdoinkwmmhhy.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlcmViemdjeGRvaW5rd21taGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4OTc1MjQsImV4cCI6MjEwMTQ3MzUyNH0.KBYJabS8LR5u5SFLd3wZnLI2AymxzawsJqSDliDt_zg';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
 const BRANDS={
   billboard:'Billboard Philippines', rolling:'Rolling Stone Philippines', game:'The GAME',
   mega:'MEGA', vman:'VMAN SEA', delish:'Delish Philippines', bluprint:'BluPrint',
   tbm:'The Business Manual', vogue:'Vogue Philippines', allure:'Allure Philippines'
 };
-const BASE_EVENTS=[
-  {id:1,b:'mega',title:'The MEGA Ball 2026',date:'Oct 3',venue:'Shangri-La The Fort, BGC',price:8000},
-  {id:2,b:'billboard',title:'Billboard PH Live: Mainstage',date:'Sep 12',venue:'Mall of Asia Arena, Pasay',price:2500},
-  {id:3,b:'vogue',title:'Vogue Gala: Terno Reimagined',date:'Nov 14',venue:'National Museum of Fine Arts, Manila',price:12000},
-  {id:4,b:'rolling',title:'Rolling Stone Sessions: Anniversary Night',date:'Aug 22',venue:'123 Block, Mandaluyong',price:1500},
-  {id:5,b:'game',title:'The GAME Fight Night',date:'Sep 5',venue:'Araneta Coliseum, Quezon City',price:1800},
-  {id:6,b:'allure',title:'Allure Beauty Summit',date:'Aug 29',venue:'Samsung Hall, SM Aura, BGC',price:950},
-  {id:7,b:'delish',title:'Delish Food Crawl: BGC Edition',date:'Sep 19',venue:'Bonifacio High Street, BGC',price:1200},
-  {id:8,b:'bluprint',title:'BluPrint Design Forum',date:'Oct 10',venue:'SMX Convention Center, Pasay',price:2200},
-  {id:9,b:'tbm',title:'Founders Summit 2026',date:'Sep 26',venue:'Grand Hyatt Manila, BGC',price:4500},
-  {id:10,b:'vman',title:'VMAN SEA Cover Launch',date:'Aug 15',venue:'The Island, BGC',price:1000},
-  {id:11,b:'billboard',title:'Charting: Songwriters’ Camp',date:'Sep 30',venue:'Kantana Studios, Makati',price:800},
-  {id:12,b:'game',title:'Manila Clash: Esports Finals',date:'Oct 24',venue:'SM Mall of Asia Arena, Pasay',price:600},
-  {id:13,b:'billboard',title:'Filipino Music Awards 2026',date:'Oct 21',venue:'Mall of Asia Arena, Pasay',price:3000},
-];
-const K_CUSTOM='frontrow_events_custom', K_PAUSED='frontrow_paused', K_DEMO='frontrow_admin_demo', K_CKS='frontrow_checkins', K_APP='frontrow_v1',
-      K_OVR='frontrow_events_overrides', K_ADMINS='frontrow_admins', K_SESSION='frontrow_admin_session';
-const peso=n=>'₱'+n.toLocaleString('en-PH');
-const $=id=>document.getElementById(id);
-const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
-const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const BRAND_COLORS={
   billboard:'#E8362D', rolling:'#F2994A', game:'#35C46E', mega:'#E8C15A', vman:'#8E7CFF',
   delish:'#FF8B5E', bluprint:'#4D82FF', tbm:'#34B3A6', vogue:'#D98CD1', allure:'#FF6F91'
 };
-const NAMES=['Miguel Santos','Ana Reyes','Paolo Cruz','Bianca Lim','Jae Villanueva','Kat dela Rosa','Marco Tan','Iya Ramos','Dre Bautista','Cess Aquino','Nico Garcia','Lea Mendoza'];
+const peso=n=>'₱'+n.toLocaleString('en-PH');
+let EVENTS=[];
+function evById(id){ return EVENTS.find(e=>e.id===id); }
+function fmtDate(iso){
+  const d=new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+function mapEventRow(row){
+  return { id:row.id, b:row.brand_id, title:row.title, date:fmtDate(row.event_date), rawDate:row.event_date,
+    venue:row.venue, price:row.price, time:row.doors_time, about:row.description,
+    img:row.image_url||null, isPaused:row.is_paused };
+}
+async function loadEventsFromSupabase(){
+  const { data, error } = await sb.from('events').select('*').order('id');
+  if(error){ console.error('Failed to load events', error); return; }
+  EVENTS=(data||[]).map(mapEventRow);
+}
 
-function overridesMap(){ return load(K_OVR,{}); }
-function allEvents(){
-  const ovr=overridesMap();
-  return BASE_EVENTS.concat(load(K_CUSTOM,[])).map(e=>ovr[e.id]?{...e,...ovr[e.id]}:e);
+/* ---------- auth (real Supabase Auth) ---------- */
+let authSession=null, authProfile=null;
+sb.auth.onAuthStateChange(async (event,session)=>{
+  authSession=session;
+  if(session){
+    try{
+      const { data } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',session.user.id).single();
+      authProfile=data||null;
+    }catch(e){ authProfile=null; }
+  }else authProfile=null;
+});
+function currentSession(){
+  return (authSession && authProfile && authProfile.is_admin) ? {email:authProfile.email, isOwner:!!authProfile.is_owner} : null;
 }
-function evById(id){ return allEvents().find(e=>e.id===id); }
-function dateToInputVal(dateStr){
-  const d=new Date(dateStr+', 2026');
-  return d.toISOString().slice(0,10);
+async function signInAdmin(email,password){
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if(error) return {ok:false, msg:error.message};
+  const { data:prof } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',data.user.id).single();
+  if(!prof || !prof.is_admin){ await sb.auth.signOut(); return {ok:false, msg:'That account exists but isn’t an admin.'}; }
+  authSession=data.session; authProfile=prof;
+  return {ok:true};
 }
+async function signUpAdmin(email,password){
+  const { data, error } = await sb.auth.signUp({ email, password });
+  if(error) return {ok:false, msg:error.message};
+  if(!data.session) return {ok:false, msg:'Account created — check your email to confirm it, then sign in.', info:true};
+  const { data:prof } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',data.user.id).single();
+  if(!prof || !prof.is_admin){ await sb.auth.signOut(); return {ok:false, msg:'Account created, but this email wasn’t invited as an admin yet.'}; }
+  authSession=data.session; authProfile=prof;
+  return {ok:true};
+}
+async function signOutAdmin(){ await sb.auth.signOut(); authSession=null; authProfile=null; }
 
-/* ---------- admins + session ---------- */
-function adminsList(){
-  let a=load(K_ADMINS,null);
-  if(!a){ a=[{email:'admin@agc.ph', password:'agcadmin123', owner:true, addedAt:Date.now()}]; save(K_ADMINS,a); }
-  const owner=a.find(x=>x.owner);
-  if(owner && !owner.password){ owner.password='agcadmin123'; save(K_ADMINS,a); }
-  return a;
-}
-function isAdminEmail(email){
-  return adminsList().some(a=>a.email.toLowerCase()===email.toLowerCase());
-}
-const OWNER_EMAIL='admin@agc.ph', OWNER_PASS='agcadmin123';
-function checkCredentials(email,password){
-  email=(email||'').trim(); password=(password||'').trim();
-  if(email.toLowerCase()===OWNER_EMAIL && password===OWNER_PASS) return true;
-  return adminsList().some(a=>a.email.toLowerCase()===email.toLowerCase() && a.password===password);
-}
-function currentSession(){ return load(K_SESSION,null); }
-function setSession(email){ save(K_SESSION,{email,since:Date.now()}); }
-function clearSession(){ localStorage.removeItem(K_SESSION); }
 function newCode(){
   let s='';const c='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   for(let i=0;i<8;i++)s+=c[Math.floor(Math.random()*c.length)];
   return 'FR-'+s.slice(0,4)+'-'+s.slice(4);
 }
-/* bookings = app purchases (this browser) + generated samples */
-function allBookings(){
-  const app=(load(K_APP,{}).tickets||[]).map(t=>({...t, buyer:'App user (this device)', src:'app'}));
-  const demo=load(K_DEMO,[]).map(t=>({...t, src:'sample'}));
-  return app.concat(demo).filter(t=>evById(t.id)).sort((a,b)=>(b.ts||0)-(a.ts||0));
-}
-const gross=list=>list.reduce((s,t)=>s+(evById(t.id)?.price||0)*t.qty,0);
-const seats=list=>list.reduce((s,t)=>s+t.qty,0);
+function dateToInputVal(iso){ return iso; }
 
 /* ---------- views ---------- */
 document.querySelectorAll('.snav').forEach(b=>{
@@ -366,18 +366,20 @@ document.querySelectorAll('.snav').forEach(b=>{
   };
 });
 
-function renderDash(){
-  const bk=allBookings(), paused=new Set(load(K_PAUSED,[]));
-  const live=allEvents().filter(e=>!paused.has(e.id)).length;
+async function renderDash(){
+  const { data:bkRows } = await sb.from('bookings').select('*').eq('status','confirmed');
+  const bk=bkRows||[];
+  const gross=bk.reduce((s,t)=>s+t.total_amount,0), seats=bk.reduce((s,t)=>s+t.qty,0);
+  const live=EVENTS.filter(e=>!e.isPaused).length;
+  let cksCount=0; try{ const {count}=await sb.from('checkins').select('*',{count:'exact',head:true}); cksCount=count||0; }catch(e){}
   $('dash-sub').textContent=new Date().toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric', year:'numeric'});
   $('stat-cards').innerHTML=`
-    <div class="stat"><div class="k">Gross revenue</div><div class="v">${peso(gross(bk))}</div><div class="d">across ${bk.length} bookings</div></div>
-    <div class="stat"><div class="k">Tickets sold</div><div class="v">${seats(bk)}</div><div class="d">${bk.filter(b=>b.src==='app').length} from the live app</div></div>
-    <div class="stat"><div class="k">Events on sale</div><div class="v">${live}</div><div class="d">${allEvents().length-live} paused</div></div>
-    <div class="stat"><div class="k">Checked in</div><div class="v">${load(K_CKS,[]).length}</div><div class="d">at the gate</div></div>`;
-  // brand bars
+    <div class="stat"><div class="k">Gross revenue</div><div class="v">${peso(gross)}</div><div class="d">across ${bk.length} bookings</div></div>
+    <div class="stat"><div class="k">Tickets sold</div><div class="v">${seats}</div><div class="d">across all devices</div></div>
+    <div class="stat"><div class="k">Events on sale</div><div class="v">${live}</div><div class="d">${EVENTS.length-live} paused</div></div>
+    <div class="stat"><div class="k">Checked in</div><div class="v">${cksCount}</div><div class="d">at the gate</div></div>`;
   const byBrand={};
-  bk.forEach(t=>{const e=evById(t.id); byBrand[e.b]=(byBrand[e.b]||0)+e.price*t.qty;});
+  bk.forEach(t=>{const e=evById(t.event_id); if(!e)return; byBrand[e.b]=(byBrand[e.b]||0)+t.total_amount;});
   const rows=Object.entries(byBrand).sort((a,b)=>b[1]-a[1]);
   const max=rows[0]?.[1]||1;
   $('brand-bars').innerHTML=rows.length?rows.map(([b,v])=>{
@@ -386,44 +388,42 @@ function renderDash(){
     <span class="bar-track"><span class="bar-fill" style="width:${Math.max(4,v/max*100)}%;background:${c}"></span></span>
     <span class="bv">${peso(v)}</span></div>`;
   }).join('')
-    :'<div class="empty">No sales yet — book in the app or generate samples.</div>';
-  // recent
-  const cks=new Set(load(K_CKS,[]).map(c=>c.code));
+    :'<div class="empty">No sales yet — bookings made in the app will show up here.</div>';
+  const recent=bk.slice().sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,8);
   $('recent-tbl').innerHTML='<tr><th>Code</th><th>Event</th><th>Qty</th><th>Amount</th></tr>'+
-    (bk.slice(0,8).map(t=>{const e=evById(t.id);return `<tr><td class="code">${t.code||'—'}</td><td>${e.title}</td><td><b>${t.qty}</b></td><td><b>${peso(e.price*t.qty)}</b></td></tr>`;}).join('')||'<tr><td colspan="4"><div class="empty">Nothing yet.</div></td></tr>');
+    (recent.map(t=>{const e=evById(t.event_id);return `<tr><td class="code">${t.code}</td><td>${e?e.title:'—'}</td><td><b>${t.qty}</b></td><td><b>${peso(t.total_amount)}</b></td></tr>`;}).join('')||'<tr><td colspan="4"><div class="empty">Nothing yet.</div></td></tr>');
 }
 
-function renderEvents(){
-  const paused=new Set(load(K_PAUSED,[]));
-  const custom=load(K_CUSTOM,[]);
-  const ovr=overridesMap();
-  const bk=allBookings();
-  const sold=id=>seats(bk.filter(t=>t.id===id));
+async function renderEvents(){
+  const { data:counts } = await sb.rpc('get_event_seat_counts');
+  const soldMap=Object.fromEntries((counts||[]).map(c=>[c.event_id,c.sold]));
   $('ev-tbl').innerHTML='<tr><th>Event</th><th>Brand</th><th>Date</th><th>Price</th><th>Sold</th><th>Revenue</th><th>Status</th><th></th></tr>'+
-    allEvents().map(e=>{
-      const isP=paused.has(e.id), isC=custom.some(c=>c.id===e.id), isEdited=!!ovr[e.id];
+    EVENTS.map(e=>{
+      const isP=e.isPaused, sold=soldMap[e.id]||0;
       return `<tr>
-        <td><span style="display:flex;align-items:center;gap:9px">${e.img?`<img src="${e.img}" alt="" style="width:40px;height:28px;border-radius:6px;object-fit:cover;border:1px solid var(--line2)">`:''}<b>${e.title}</b>${isC?' <span class="chip red">NEW</span>':''}${(!isC&&isEdited)?' <span class="chip warn">EDITED</span>':''}</span></td>
+        <td><span style="display:flex;align-items:center;gap:9px">${e.img?`<img src="${e.img}" alt="" style="width:40px;height:28px;border-radius:6px;object-fit:cover;border:1px solid var(--line2)">`:''}<b>${e.title}</b></span></td>
         <td>${BRANDS[e.b]}</td><td>${e.date}</td><td>${peso(e.price)}</td>
-        <td><b>${sold(e.id)}</b></td><td><b>${peso(sold(e.id)*e.price)}</b></td>
+        <td><b>${sold}</b></td><td><b>${peso(sold*e.price)}</b></td>
         <td><span class="chip ${isP?'mut':'ok'}">${isP?'PAUSED':'ON SALE'}</span></td>
         <td style="white-space:nowrap">
           <button class="btn ghost small" data-edit="${e.id}">Edit</button>
-          <button class="btn ghost small" data-pause="${e.id}">${isP?'Resume':'Pause'}</button>
-          ${isC?`<button class="btn danger small" data-del="${e.id}">Delete</button>`:''}
+          <button class="btn ghost small" data-pause="${e.id}" data-cur="${isP}">${isP?'Resume':'Pause'}</button>
+          <button class="btn danger small" data-del="${e.id}">Delete</button>
         </td></tr>`;
     }).join('');
   document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEdit(+b.dataset.edit));
-  document.querySelectorAll('[data-pause]').forEach(b=>b.onclick=()=>{
-    const id=+b.dataset.pause, p=load(K_PAUSED,[]);
-    p.includes(id)?save(K_PAUSED,p.filter(x=>x!==id)):save(K_PAUSED,[...p,id]);
-    renderAll();
+  document.querySelectorAll('[data-pause]').forEach(b=>b.onclick=async ()=>{
+    const id=+b.dataset.pause, cur=b.dataset.cur==='true';
+    const { error } = await sb.from('events').update({is_paused:!cur}).eq('id',id);
+    if(error){ alert('Could not update: '+error.message); return; }
+    await loadEventsFromSupabase(); renderAll();
   });
-  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async ()=>{
     const id=+b.dataset.del;
-    save(K_CUSTOM,load(K_CUSTOM,[]).filter(c=>c.id!==id));
-    const ov=overridesMap(); delete ov[id]; save(K_OVR,ov);
-    renderAll();
+    if(!confirm('Delete this event permanently? This cannot be undone.')) return;
+    const { error } = await sb.from('events').delete().eq('id',id);
+    if(error){ alert('Could not delete: '+error.message); return; }
+    await loadEventsFromSupabase(); renderAll();
   });
 }
 
@@ -439,11 +439,11 @@ function openEdit(id){
   $('edit-title-lbl').textContent='Edit — '+e.title;
   $('e-title').value=e.title;
   $('e-brand').value=e.b;
-  $('e-date').value=dateToInputVal(e.date);
+  $('e-date').value=e.rawDate;
   $('e-price').value=e.price;
-  $('e-time').value='';
+  $('e-time').value=e.time||'';
   $('e-venue').value=e.venue;
-  $('e-about').value='';
+  $('e-about').value=e.about||'';
   $('e-img-wrap').style.display=e.img?'block':'none';
   if(e.img) $('e-img-prev').src=e.img;
   $('e-msg').textContent='';
@@ -469,68 +469,68 @@ $('e-img').addEventListener('change',ev=>{
   };
   rd.readAsDataURL(f);
 });
-$('e-save').onclick=()=>{
+$('e-save').onclick=async ()=>{
   const title=$('e-title').value.trim(), b=$('e-brand').value, dt=$('e-date').value,
         venue=$('e-venue').value.trim(), price=parseInt($('e-price').value,10),
         time=$('e-time').value.trim(), about=$('e-about').value.trim();
   if(!title||!dt||!venue||!(price>=0)){ $('e-msg').style.color='var(--red2)'; $('e-msg').textContent='Fill in title, date, venue, and price.'; return; }
-  const d=new Date(dt+'T00:00:00');
-  const mo=d.toLocaleDateString('en-US',{month:'short'}), da=String(d.getDate());
-  const patch={title, b, date:mo+' '+da, mo, da, venue, price};
-  if(time) patch.time=time;
-  if(about) patch.about=about;
-  if(editImg) patch.img=editImg;
-  const ov=overridesMap();
-  ov[editId]={...(ov[editId]||{}), ...patch};
-  save(K_OVR,ov);
+  const patch={ title, brand_id:b, event_date:dt, venue, price };
+  if(time) patch.doors_time=time;
+  if(about) patch.description=about;
+  if(editImg) patch.image_url=editImg;
+  const btn=$('e-save'); btn.disabled=true; btn.textContent='Saving…';
+  const { error } = await sb.from('events').update(patch).eq('id',editId);
+  btn.disabled=false; btn.textContent='Save changes';
+  if(error){ $('e-msg').style.color='var(--red2)'; $('e-msg').textContent='Could not save: '+error.message; return; }
   $('edit-veil').classList.remove('open');
-  renderAll();
-};
-$('e-reset').onclick=()=>{
-  const ov=overridesMap();
-  if(ov[editId]){ delete ov[editId]; save(K_OVR,ov); }
-  $('edit-veil').classList.remove('open');
-  renderAll();
+  await loadEventsFromSupabase(); renderAll();
 };
 
-function renderBook(){
-  const bk=allBookings();
-  const cks=new Set(load(K_CKS,[]).map(c=>c.code));
-  $('book-sub').textContent=`${bk.length} bookings · ${seats(bk)} tickets · ${peso(gross(bk))} gross`;
-  $('book-tbl').innerHTML='<tr><th>Code</th><th>Buyer</th><th>Event</th><th>Qty</th><th>Amount</th><th>Source</th><th>Status</th></tr>'+
-    (bk.map(t=>{const e=evById(t.id);
-      return `<tr><td class="code">${t.code||'—'}</td><td>${t.buyer||'—'}</td><td>${e.title}</td>
-      <td><b>${t.qty}</b></td><td><b>${peso(e.price*t.qty)}</b></td>
-      <td><span class="chip ${t.src==='app'?'red':'mut'}">${t.src==='app'?'LIVE APP':'SAMPLE'}</span></td>
-      <td><span class="chip ${cks.has(t.code)?'ok':'warn'}">${cks.has(t.code)?'CHECKED IN':'NOT ARRIVED'}</span></td></tr>`;
-    }).join('')||'<tr><td colspan="7"><div class="empty">No bookings yet — buy a ticket in the app (same browser) or generate samples.</div></td></tr>');
+async function renderBook(){
+  const { data:bkRows } = await sb.from('bookings').select('*').order('created_at',{ascending:false}).limit(60);
+  const bk=bkRows||[];
+  const { data:cksRows } = await sb.from('checkins').select('booking_id');
+  const ckSet=new Set((cksRows||[]).map(c=>c.booking_id));
+  const gross=bk.reduce((s,t)=>s+t.total_amount,0), seats=bk.reduce((s,t)=>s+t.qty,0);
+  $('book-sub').textContent=`${bk.length} bookings · ${seats} tickets · ${peso(gross)} gross`;
+  $('book-tbl').innerHTML='<tr><th>Code</th><th>Buyer</th><th>Event</th><th>Qty</th><th>Amount</th><th>Status</th></tr>'+
+    (bk.map(t=>{const e=evById(t.event_id);
+      return `<tr><td class="code">${t.code}</td><td>${t.buyer_name||'guest'}</td><td>${e?e.title:'—'}</td>
+      <td><b>${t.qty}</b></td><td><b>${peso(t.total_amount)}</b></td>
+      <td><span class="chip ${ckSet.has(t.id)?'ok':'warn'}">${ckSet.has(t.id)?'CHECKED IN':'NOT ARRIVED'}</span></td></tr>`;
+    }).join('')||'<tr><td colspan="6"><div class="empty">No bookings yet — buy a ticket in the app.</div></td></tr>');
 }
 
-function renderCk(){
-  const cks=load(K_CKS,[]);
+async function renderCk(){
+  const { data:cks } = await sb.from('checkins').select('*, bookings(code,qty,event_id)').order('checked_in_at',{ascending:false});
   $('ck-tbl').innerHTML='<tr><th>Code</th><th>Event</th><th>Qty</th><th>Time</th></tr>'+
-    (cks.slice().reverse().map(c=>`<tr><td class="code">${c.code}</td><td>${c.event}</td><td><b>${c.qty}</b></td><td>${new Date(c.ts).toLocaleTimeString()}</td></tr>`).join('')||'<tr><td colspan="4"><div class="empty">No check-ins yet.</div></td></tr>');
+    ((cks||[]).map(c=>{const e=evById(c.bookings?.event_id);return `<tr><td class="code">${c.bookings?.code||''}</td><td>${e?e.title:'—'}</td><td><b>${c.bookings?.qty||''}</b></td><td>${new Date(c.checked_in_at).toLocaleTimeString()}</td></tr>`;}).join('')||'<tr><td colspan="4"><div class="empty">No check-ins yet.</div></td></tr>');
 }
 $('ck-go').onclick=doCheckin;
 $('ck-in').addEventListener('keydown',e=>{if(e.key==='Enter')doCheckin();});
-function doCheckin(){
+async function doCheckin(){
   const code=$('ck-in').value.trim().toUpperCase();
   const r=$('ck-result');
   if(!code){r.className='ck-result';return;}
-  const bk=allBookings().find(t=>(t.code||'').toUpperCase()===code);
-  const cks=load(K_CKS,[]);
-  if(!bk){
+  const { data:hits, error } = await sb.rpc('find_booking_by_code',{p_code:code});
+  const hit=(hits&&hits[0])||null;
+  if(error||!hit){
     r.className='ck-result bad';
     r.innerHTML=`<b>✕ Not found</b><br>No booking matches <span class="code">${code}</span>. Check the code on the ticket's QR screen.`;
-  }else if(cks.some(c=>c.code===bk.code)){
-    r.className='ck-result warn2';
-    r.innerHTML=`<b>⚠ Already used</b><br><span class="code">${bk.code}</span> was checked in earlier — each code admits once.`;
   }else{
-    const e=evById(bk.id);
-    cks.push({code:bk.code,event:e.title,qty:bk.qty,ts:Date.now()});
-    save(K_CKS,cks);
-    r.className='ck-result good';
-    r.innerHTML=`<b>✓ Welcome in!</b><br>${e.title} — <b>${bk.qty}</b> ticket${bk.qty!==1?'s':''} · ${bk.buyer||'guest'}<br><span class="code">${bk.code}</span> marked as used.`;
+    const { data:dup } = await sb.from('checkins').select('id').eq('booking_id',hit.id).maybeSingle();
+    if(dup){
+      r.className='ck-result warn2';
+      r.innerHTML=`<b>⚠ Already used</b><br><span class="code">${hit.code}</span> was checked in earlier — each code admits once.`;
+    }else{
+      const { error:insErr } = await sb.from('checkins').insert({booking_id:hit.id});
+      const e=evById(hit.event_id);
+      if(insErr){ r.className='ck-result bad'; r.innerHTML=`<b>✕ Could not check in.</b><br>${insErr.message}`; }
+      else{
+        r.className='ck-result good';
+        r.innerHTML=`<b>✓ Welcome in!</b><br>${e?e.title:'Event'} — <b>${hit.qty}</b> ticket${hit.qty!==1?'s':''} · ${hit.buyer_name||'guest'}<br><span class="code">${hit.code}</span> marked as used.`;
+      }
+    }
   }
   $('ck-in').value='';
   renderAll();
@@ -561,80 +561,90 @@ $('f-img').addEventListener('change',ev=>{
   };
   rd.readAsDataURL(f);
 });
-$('f-save').onclick=()=>{
+$('f-save').onclick=async ()=>{
   const title=$('f-title').value.trim(), b=$('f-brand').value, dt=$('f-date').value,
-        time=$('f-time').value.trim()||'7:00 PM', venue=$('f-venue').value.trim(),
+        time=$('f-time').value.trim()||'7:00 PM onwards', venue=$('f-venue').value.trim(),
         price=parseInt($('f-price').value,10), about=$('f-about').value.trim();
   const msg=$('f-msg');
   if(!title||!dt||!venue||!(price>=0)){ msg.style.color='var(--red2)'; msg.textContent='Fill in title, date, venue, and price.'; return; }
-  const d=new Date(dt+'T00:00:00');
-  const date=d.toLocaleDateString('en-US',{month:'short'})+' '+d.getDate();
-  const custom=load(K_CUSTOM,[]);
-  const maxId=Math.max(100,...BASE_EVENTS.map(e=>e.id),...custom.map(c=>c.id));
-  custom.push({id:maxId+1, b, title, date, venue, price, time:time+' onwards', about, img:fImg, booked:String(Math.floor(Math.random()*400+40))});
-  save(K_CUSTOM,custom);
+  const btn=$('f-save'); btn.disabled=true; btn.textContent='Publishing…';
+  const { error } = await sb.from('events').insert({
+    brand_id:b, title, event_date:dt, venue, price, doors_time:time,
+    description: about||'Newly announced — more details soon.', image_url: fImg||null, featured:false
+  });
+  btn.disabled=false; btn.textContent='Publish event';
+  if(error){ msg.style.color='var(--red2)'; msg.textContent='Could not publish: '+error.message; return; }
   msg.style.color='var(--ok)'; msg.textContent=`Published! “${title}” is now live in the app${fImg?' with its photo':''}.`;
   ['f-title','f-date','f-venue','f-price','f-about','f-time','f-img'].forEach(i=>$(i).value='');
   fImg=null; $('f-img-wrap').style.display='none';
-  renderAll();
+  await loadEventsFromSupabase(); renderAll();
 };
 
-/* samples */
-$('seed').onclick=()=>{
-  const demo=load(K_DEMO,[]);
-  const evs=allEvents();
-  for(let i=0;i<20;i++){
-    const e=evs[Math.floor(Math.random()*evs.length)];
-    demo.push({id:e.id, qty:1+Math.floor(Math.random()*4), code:newCode(),
-      ts:Date.now()-Math.floor(Math.random()*6.048e8),
-      buyer:NAMES[Math.floor(Math.random()*NAMES.length)]});
-  }
-  save(K_DEMO,demo);
-  renderAll();
-};
-$('clear-samples').onclick=()=>{ save(K_DEMO,[]); renderAll(); };
 $('refresh').onclick=()=>renderAll();
 
 /* ---------- admins view ---------- */
-function renderAdmins(){
-  const admins=adminsList();
+async function renderAdmins(){
+  const sess=currentSession();
+  const { data:admins } = await sb.from('profiles').select('email,is_admin,is_owner').eq('is_admin',true).order('is_owner',{ascending:false});
+  const { data:invites } = await sb.from('admin_invites').select('email,created_at').order('created_at',{ascending:false});
+  const invWrap=$('invite-list'); invWrap.innerHTML='';
+  if(!invites || !invites.length){ invWrap.innerHTML='<div class="empty" style="padding:14px">No pending invites.</div>'; }
+  (invites||[]).forEach(inv=>{
+    const row=document.createElement('div'); row.className='admin-row';
+    row.innerHTML=`<span class="ae">${inv.email}</span><span class="chip mut">PENDING</span><button class="btn danger small" data-cancel="${inv.email}">Cancel</button>`;
+    invWrap.appendChild(row);
+  });
+  invWrap.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=async ()=>{
+    await sb.from('admin_invites').delete().eq('email',b.dataset.cancel);
+    renderAdmins();
+  });
   const wrap=$('admin-list'); wrap.innerHTML='';
-  admins.forEach(a=>{
+  (admins||[]).forEach(a=>{
     const row=document.createElement('div');
     row.className='admin-row';
-    row.innerHTML=`<span class="ae">${a.email}</span>${a.owner?'<span class="chip red">OWNER</span>':'<span class="chip mut">ADMIN</span>'}${a.owner?'':'<button class="btn danger small" data-rm="'+a.email+'">Remove</button>'}`;
+    row.innerHTML=`<span class="ae">${a.email}</span>${a.is_owner?'<span class="chip red">OWNER</span>':'<span class="chip mut">ADMIN</span>'}${a.is_owner?'':'<button class="btn danger small" data-rm="'+a.email+'">Remove</button>'}`;
     wrap.appendChild(row);
   });
-  wrap.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{
+  wrap.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async ()=>{
     const email=b.dataset.rm;
-    const sess=currentSession();
     if(sess && sess.email.toLowerCase()===email.toLowerCase()){ alert('You can\'t remove the admin you\'re currently signed in as.'); return; }
-    save(K_ADMINS,adminsList().filter(a=>a.email.toLowerCase()!==email.toLowerCase()));
+    const { error } = await sb.rpc('set_admin_status',{target_email:email, new_status:false});
+    if(error){ alert('Could not remove: '+error.message); return; }
     renderAdmins();
   });
 }
-$('admin-add-btn').onclick=()=>{
-  const email=$('admin-email').value.trim(), pass=$('admin-pass').value;
+$('admin-add-btn').onclick=async ()=>{
+  const email=$('admin-email').value.trim();
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('Enter a valid email address.'); return; }
-  if(pass.length<6){ alert('Password needs at least 6 characters.'); return; }
-  const admins=adminsList();
-  if(admins.some(a=>a.email.toLowerCase()===email.toLowerCase())){ alert('That email is already an admin.'); return; }
-  admins.push({email, password:pass, owner:false, addedAt:Date.now()});
-  save(K_ADMINS,admins);
-  $('admin-email').value=''; $('admin-pass').value='';
+  const { error } = await sb.from('admin_invites').insert({email, invited_by:authSession?.user?.id});
+  if(error){ alert(error.code==='23505' ? 'Already invited.' : 'Could not invite: '+error.message); return; }
+  $('admin-email').value='';
   renderAdmins();
 };
-$('admin-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('admin-pass').focus();});
-$('admin-pass').addEventListener('keydown',e=>{if(e.key==='Enter')$('admin-add-btn').click();});
+$('admin-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('admin-add-btn').click();});
 
 function renderAll(){ renderDash(); renderEvents(); renderBook(); renderCk(); renderAdmins(); }
 
 /* ---------- sign-in gate ---------- */
+let loginMode='signin';
+function syncLoginMode(){
+  const su=loginMode==='signup';
+  $('login-heading').textContent = su ? 'Create your organizer account' : 'Organizer sign-in';
+  $('login-confirm-wrap').style.display = su ? 'block' : 'none';
+  $('login-go').textContent = su ? 'Create account' : 'Sign in';
+  $('login-sub').innerHTML = su
+    ? 'Only works if an existing admin already invited this email. <a id="login-toggle-signup" style="color:var(--red2);cursor:pointer">Sign in instead</a>.'
+    : 'Real Supabase account required. Been invited by an admin? <a id="login-toggle-signup" style="color:var(--red2);cursor:pointer">Create your account</a> instead.';
+  $('login-toggle-signup').onclick=()=>{ loginMode = su?'signin':'signup'; syncLoginMode(); };
+  $('login-err').style.display='none'; $('login-info').style.display='none';
+}
+$('login-toggle-signup').onclick=()=>{ loginMode='signup'; syncLoginMode(); };
 function showLogin(){
   $('login-screen').style.display='flex';
   $('app-shell').style.display='none';
-  $('login-err').style.display='none';
-  $('login-email').value=''; $('login-pass').value='';
+  $('login-err').style.display='none'; $('login-info').style.display='none';
+  $('login-email').value=''; $('login-pass').value=''; $('login-confirm').value='';
+  loginMode='signin'; syncLoginMode();
 }
 function showShell(){
   const s=currentSession();
@@ -644,20 +654,37 @@ function showShell(){
   $('whoami-ava').textContent=s.email.slice(0,2).toUpperCase();
   renderAll();
 }
-function attemptLogin(){
+$('login-go').onclick=async ()=>{
   const email=$('login-email').value.trim(), pass=$('login-pass').value;
-  if(email && pass && checkCredentials(email,pass)){
-    setSession(email);
-    showShell();
+  const btn=$('login-go'); btn.disabled=true;
+  let r;
+  if(loginMode==='signup'){
+    const confirm=$('login-confirm').value;
+    if(pass.length<6){ $('login-err').textContent='Password needs at least 6 characters.'; $('login-err').style.display='block'; btn.disabled=false; return; }
+    if(pass!==confirm){ $('login-err').textContent='Passwords don’t match.'; $('login-err').style.display='block'; btn.disabled=false; return; }
+    r=await signUpAdmin(email,pass);
   }else{
-    $('login-err').style.display='block';
+    r=await signInAdmin(email,pass);
   }
-}
-$('login-go').onclick=attemptLogin;
+  btn.disabled=false;
+  if(r.ok) showShell();
+  else if(r.info){ $('login-info').textContent=r.msg; $('login-info').style.display='block'; }
+  else{ $('login-err').textContent=r.msg||'Incorrect email or password.'; $('login-err').style.display='block'; }
+};
 $('login-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('login-pass').focus();});
-$('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')attemptLogin();});
-$('logout-btn').onclick=()=>{ clearSession(); showLogin(); };
+$('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')(loginMode==='signup'?$('login-confirm').focus():$('login-go').click());});
+$('logout-btn').onclick=async ()=>{ await signOutAdmin(); showLogin(); };
 
-adminsList(); // seed on first run
-currentSession() ? showShell() : showLogin();
+(async function boot(){
+  await loadEventsFromSupabase();
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session){
+    authSession=session;
+    try{
+      const { data:prof } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',session.user.id).single();
+      authProfile=prof||null;
+    }catch(e){ authProfile=null; }
+  }
+  currentSession() ? showShell() : showLogin();
+})();
 </script>
