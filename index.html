@@ -905,7 +905,7 @@
         <div style="position:relative;height:58%;flex-shrink:0">
           <img src="" id="ba-hero-img" alt="" style="width:100%;height:100%;object-fit:cover;display:block">
           <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,6,6,.15) 0%,rgba(7,6,6,.55) 55%,var(--bg) 100%)"></div>
-          <button class="icon-btn" data-close="buyerauth" aria-label="Back" style="position:absolute;top:14px;left:16px;background:rgba(7,6,6,.55);border:1px solid rgba(255,255,255,.18)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <button class="icon-btn" data-close="buyerauth" id="ba-landing-back" aria-label="Back" style="position:absolute;top:14px;left:16px;background:rgba(7,6,6,.55);border:1px solid rgba(255,255,255,.18)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
         </div>
         <div style="flex:1;display:flex;flex-direction:column;padding:0 24px 22px;margin-top:-14px;position:relative;z-index:1">
           <div style="text-align:center;margin-bottom:22px">
@@ -934,7 +934,7 @@
           <h1 id="ba-title">Continue with Email</h1><span style="width:40px"></span>
         </div>
         <div class="pv-scroll" id="ba-form-wrap" style="padding-top:10px">
-          <div style="font-size:12px;color:var(--muted);margin:0 20px 18px;line-height:1.5" id="ba-sub">Optional — you can always keep buying tickets as a guest. Signing in just means your tickets follow you to any device.<br>New here? <a id="ba-toggle-signup" style="color:var(--blue2);cursor:pointer">Create an account</a> instead.</div>
+          <div style="font-size:12px;color:var(--muted);margin:0 20px 18px;line-height:1.5" id="ba-sub">New here? <a id="ba-toggle-signup" style="color:var(--blue2);cursor:pointer">Create an account</a> instead.</div>
           <div class="field"><label for="ba-email">Email</label><input id="ba-email" type="email" placeholder="you@example.com" autocomplete="off"></div>
           <div class="field" id="ba-phone-wrap" style="display:none"><label for="ba-phone">Phone number</label><input id="ba-phone" type="tel" placeholder="09XX XXX XXXX" autocomplete="off"></div>
           <div class="field"><label for="ba-pass">Password</label><input id="ba-pass" type="password" placeholder="••••••••" autocomplete="off"></div>
@@ -1522,7 +1522,19 @@ function syncNav(){
   document.querySelector('.nav').style.display = anyOpen ? 'none' : 'flex';
 }
 function openPv(id){ $(id).classList.add('open'); syncNav(); }
-function closePv(id){ $(id).classList.remove('open'); syncNav(); }
+function closePv(id){ if(id==='buyerauth' && gateLocked) return; $(id).classList.remove('open'); syncNav(); }
+
+/* ---------- mandatory sign-in gate ---------- */
+let gateLocked=false;
+function syncAuthGate(){
+  if(currentUser()){
+    gateLocked=false;
+    if($('buyerauth').classList.contains('open')) closePv('buyerauth');
+  }else{
+    gateLocked=true;
+    openBuyerAuth();
+  }
+}
 document.querySelectorAll('[data-close]').forEach(b=>{ b.onclick=()=>closePv(b.dataset.close); });
 new MutationObserver(syncNav).observe(document.querySelector('.screens'), {subtree:true, attributes:true, attributeFilter:['class']});
 syncNav();
@@ -1610,11 +1622,12 @@ function openBuyerAuth(){
     $('ba-signedin-screen').style.display='flex';
     $('ba-ava').textContent=u.email.slice(0,2).toUpperCase();
     $('ba-email-display').textContent=u.email;
-    $('ba-sync-note').innerHTML=`<span class="big-t">You're all set</span>Tickets you buy while signed in will follow you to any device. Buying as a guest still works too.`;
+    $('ba-sync-note').innerHTML=`<span class="big-t">You're all set</span>Your tickets follow you to any device you sign in on.`;
   }else{
     $('ba-landing').style.display='flex';
     $('ba-hero-img').src=IMG.billboard;
     $('ba-oauth-note').textContent='';
+    $('ba-landing-back').style.display=gateLocked ? 'none' : 'flex';
   }
   openPv('buyerauth');
 }
@@ -1643,7 +1656,7 @@ function syncBaMode(){
   $('ba-go').textContent = su ? 'Create account' : 'Sign in';
   $('ba-sub').innerHTML = su
     ? 'Already have an account? <a id="ba-toggle-signup" style="color:var(--blue2);cursor:pointer">Sign in instead</a>.'
-    : 'Optional — you can always keep buying tickets as a guest. Signing in just means your tickets follow you to any device.<br>New here? <a id="ba-toggle-signup" style="color:var(--blue2);cursor:pointer">Create an account</a> instead.';
+    : 'New here? <a id="ba-toggle-signup" style="color:var(--blue2);cursor:pointer">Create an account</a> instead.';
   $('ba-toggle-signup').onclick=()=>{ state.baMode = su?'signin':'signup'; syncBaMode(); };
   $('ba-err').style.display='none'; $('ba-info').style.display='none';
 }
@@ -1695,6 +1708,7 @@ async function buyerSignOut(){
   authSession=null; authProfile=null;
   syncBuyerAuthRow();
   applyProfile();
+  syncAuthGate();
   toast('Signed out');
 }
 $('ba-signout').onclick=async ()=>{ await buyerSignOut(); openBuyerAuth(); };
@@ -1803,6 +1817,7 @@ sb.auth.onAuthStateChange(async (event, session)=>{
   }
   syncBuyerAuthRow();
   applyProfile();
+  syncAuthGate();
 });
 function currentUser(){ return (authSession && authProfile) ? authProfile : null; }
 function currentSession(){
@@ -2301,7 +2316,7 @@ function syncHeart(){
 function closeSheet(){ $('veil').classList.remove('open'); $('sheet').classList.remove('open'); syncNav(); }
 $('veil').onclick=closeSheet; $('d-back').onclick=closeSheet;
 $('d-heart').onclick=()=>toggleFav(state.sel.id);
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();closeTicket();['success','pay','addcard','passcode','support','console','acct','linked','followscr','attendscr','settingsscr','editevent','adminlogin','buyerauth'].forEach(id=>$(id).classList.remove('open'));syncNav();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();closeTicket();['success','pay','addcard','passcode','support','console','acct','linked','followscr','attendscr','settingsscr','editevent','adminlogin'].forEach(id=>$(id).classList.remove('open'));closePv('buyerauth');syncNav();}});
 
 /* ---------- payment flow ---------- */
 let pay={ev:null, qty:1, total:0, method:null, agreed:false, pin:''};
