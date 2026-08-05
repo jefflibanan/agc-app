@@ -593,7 +593,7 @@
       <div class="prof-head">
         <img class="ava" id="ava-img2" alt="Profile">
         <div class="prof-name" id="prof-name-el">Guest</div>
-        <div class="prof-sub" id="prof-city-el">Manila, Philippines</div>
+        <div class="prof-sub" id="prof-city-el"></div>
       </div>
       <div class="stat-row">
         <div class="stat"><div class="n" id="st-tix">0</div><div class="k">Tickets</div></div>
@@ -1129,7 +1129,7 @@ const AV_COLORS = ['#5C7CFA','#F783AC','#63E6BE','#FFD43B','#FF922B'];
 
 let state = { cat:'All', ecat:'All', q:'', qh:'', tab:'home', sel:null, qty:1, selTicket:null,
   tickets:[], favs:new Set(), followed:new Set(['billboard','vogue','delish']),
-  paused:new Set(), profile:{name:'Guest', email:'', city:'Manila, Philippines', photo:null, phone:''},
+  paused:new Set(), profile:{name:'Guest', email:'', city:'', photo:null, phone:''},
   linked:new Set(['google']), prefs:{push:true, email:false, remind:true, lang:'en', lightmode:false} };
 function LIVE(){ return EVENTS.filter(e=>!state.paused.has(e.id)); }
 function imgOf(ev){ return ev.img || IMG[ev.b] || ''; }
@@ -1530,9 +1530,12 @@ syncNav();
 /* ---------- account settings ---------- */
 let pendingPhoto=null;
 function applyProfile(){
-  $('greet-name').textContent=state.profile.name;
-  $('prof-name-el').textContent=state.profile.name;
-  $('prof-city-el').textContent=state.profile.city;
+  const signedIn=!!currentUser();
+  const displayName=signedIn ? state.profile.name : 'Guest';
+  const displayCity=signedIn ? state.profile.city : '';
+  $('greet-name').textContent=displayName;
+  $('prof-name-el').textContent=displayName;
+  $('prof-city-el').textContent=displayCity;
   const src=state.profile.photo||DEFAULT_AVA;
   $('ava-img').src=src; $('ava-img2').src=src;
 }
@@ -1567,7 +1570,7 @@ $('as-photo').addEventListener('change',ev=>{
 $('as-save').onclick=()=>{
   const name=$('as-name').value.trim(), city=$('as-city').value.trim();
   if(!name){ toast('Display name can’t be empty'); return; }
-  state.profile={...state.profile, name, email:$('as-email').value.trim(), city:city||'Manila, Philippines'};
+  state.profile={...state.profile, name, email:$('as-email').value.trim(), city};
   if(pendingPhoto) state.profile.photo=pendingPhoto;
   saveState(); applyProfile();
   closePv('acct'); toast('Profile updated');
@@ -1691,6 +1694,7 @@ async function buyerSignOut(){
   try{ await sb.auth.signOut(); }catch(e){ console.error('signOut network call failed, clearing local session anyway',e); }
   authSession=null; authProfile=null;
   syncBuyerAuthRow();
+  applyProfile();
   toast('Signed out');
 }
 $('ba-signout').onclick=async ()=>{ await buyerSignOut(); openBuyerAuth(); };
@@ -1798,6 +1802,7 @@ sb.auth.onAuthStateChange(async (event, session)=>{
     authProfile=null;
   }
   syncBuyerAuthRow();
+  applyProfile();
 });
 function currentUser(){ return (authSession && authProfile) ? authProfile : null; }
 function currentSession(){
