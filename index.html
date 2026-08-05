@@ -1287,7 +1287,7 @@ function openTicket(t){
   $('tk-time').textContent=ev.time.replace(' onwards','');
   $('tk-venue').textContent=ev.venue;
   $('tk-qty').textContent='×'+t.qty;
-  $('tk-total').textContent=peso(ev.price*t.qty);
+  $('tk-total').textContent=peso(t.total!=null ? t.total : ev.price*t.qty);
   $('tk-code').textContent=t.code||'';
   drawQR($('tk-canvas'), (t.code||'')+ev.id);
   const c=$('tk-cancel'); c.classList.remove('confirm'); c.textContent='Cancel booking';
@@ -2225,7 +2225,7 @@ function keyPress(k){
 
 async function completeBooking(){
   const code=newCode();
-  state.tickets.push({id:pay.ev.id, qty:pay.qty, code, ts:Date.now()});
+  state.tickets.push({id:pay.ev.id, qty:pay.qty, total:pay.total, code, ts:Date.now()});
   saveState(); syncBadge();
   renderTickets(); renderProfile();
   $('passcode').classList.remove('open');
