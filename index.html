@@ -1693,7 +1693,7 @@ async function buyerSignOut(){
   syncBuyerAuthRow();
   toast('Signed out');
 }
-$('ba-signout').onclick=async ()=>{ await buyerSignOut(); closePv('buyerauth'); };
+$('ba-signout').onclick=async ()=>{ await buyerSignOut(); openBuyerAuth(); };
 $('settings-signout').onclick=async ()=>{
   await buyerSignOut();
   $('settings-account-row').style.display='none';
