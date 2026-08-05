@@ -368,17 +368,28 @@ async function loadEventsFromSupabase(){
 console.log('[auth-debug] script start, storage key present:', Object.keys(localStorage).some(k=>k.includes('sb-')));
 let authSession=null, authProfile=null, authReady=false, resolveAuthReady;
 const authReadyPromise=new Promise(res=>{ resolveAuthReady=res; });
+/* A browser extension on this site (confirmed: "Redirect Path" by Ayima, which
+   hooks into navigation/requests) has been observed intermittently breaking this
+   profiles lookup, causing sign-in.html and admin.html to disagree about whether
+   a session is valid and ping-pong redirect between each other. Retry a few times
+   before accepting a failure. */
+async function fetchAdminProfile(userId){
+  for(let attempt=1; attempt<=3; attempt++){
+    try{
+      const { data, error } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',userId).single();
+      if(data) return data;
+      console.log('[auth-debug] profile fetch attempt',attempt,'returned empty, error:',error);
+    }catch(e){ console.log('[auth-debug] profile fetch attempt',attempt,'threw:',e); }
+    if(attempt<3) await new Promise(r=>setTimeout(r,400*attempt));
+  }
+  return null;
+}
 sb.auth.onAuthStateChange(async (event,session)=>{
   console.log('[auth-debug] onAuthStateChange fired:', event, 'session:', !!session);
   try{
     authSession=session;
-    if(session){
-      try{
-        const { data, error } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',session.user.id).single();
-        authProfile=data||null;
-        console.log('[auth-debug] profile fetch result:', data, 'error:', error);
-      }catch(e){ authProfile=null; console.log('[auth-debug] profile fetch threw:', e); }
-    }else authProfile=null;
+    authProfile = session ? await fetchAdminProfile(session.user.id) : null;
+    console.log('[auth-debug] profile resolved:', authProfile);
   }catch(e){ console.log('[auth-debug] onAuthStateChange handler threw:', e); authProfile=null; }
   finally{
     if(!authReady){ authReady=true; resolveAuthReady(); console.log('[auth-debug] authReady resolved, authProfile:', authProfile); }
@@ -669,7 +680,6 @@ function renderAll(){ renderDash(); renderEvents(); renderBook(); renderCk(); re
 function goToSignIn(){ location.replace('sign-in.html'); }
 function showShell(){
   const s=currentSession();
-  $('login-screen').style.display='none';
   $('app-shell').style.display='flex';
   $('whoami-email').textContent=s.email;
   $('whoami-ava').textContent=s.email.slice(0,2).toUpperCase();
