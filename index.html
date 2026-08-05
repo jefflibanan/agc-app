@@ -48,7 +48,7 @@
   .statusbar svg{opacity:.95}
 
   .screens{flex:1;position:relative;overflow:hidden}
-  .screen{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;display:none;padding-bottom:20px;scrollbar-width:none}
+  .screen{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;display:none;padding-bottom:20px;scrollbar-width:none;isolation:isolate}
   .screen::-webkit-scrollbar{display:none}
   .screen.active{display:block}
 
@@ -188,7 +188,7 @@
   .tix-summary .n b{color:var(--txt)}
 
   /* ================= ticket detail ================= */
-  .tsheet{position:absolute;inset:0;background:var(--bg);transform:translateY(104%);transition:transform .32s cubic-bezier(.32,.72,.28,1);z-index:24;display:flex;flex-direction:column;overflow:hidden}
+  .tsheet{position:absolute;inset:0;background:var(--bg);transform:translateY(104%);transition:transform .32s cubic-bezier(.32,.72,.28,1);z-index:24;display:flex;flex-direction:column;overflow:hidden;isolation:isolate}
   .tsheet.open{transform:translateY(0)}
   .tsheet-scroll{flex:1;overflow-y:auto;scrollbar-width:none;padding-bottom:26px}
   .tsheet-scroll::-webkit-scrollbar{display:none}
@@ -345,7 +345,7 @@
   /* ================= detail sheet ================= */
   .veil{position:absolute;inset:0;background:rgba(2,4,10,.65);opacity:0;pointer-events:none;transition:opacity .25s;z-index:20;backdrop-filter:blur(2px)}
   .veil.open{opacity:1;pointer-events:auto}
-  .sheet{position:absolute;inset:0;background:var(--bg);transform:translateY(104%);transition:transform .32s cubic-bezier(.32,.72,.28,1);z-index:21;display:flex;flex-direction:column;overflow:hidden}
+  .sheet{position:absolute;inset:0;background:var(--bg);transform:translateY(104%);transition:transform .32s cubic-bezier(.32,.72,.28,1);z-index:21;display:flex;flex-direction:column;overflow:hidden;isolation:isolate}
   .sheet.open{transform:translateY(0)}
   .sheet-scroll{flex:1;overflow-y:auto;scrollbar-width:none}
   .sheet-scroll::-webkit-scrollbar{display:none}
@@ -387,7 +387,7 @@
   .dcta .btn{flex:1;padding:14px}
 
   /* ================= success overlay ================= */
-  .success{position:absolute;inset:0;background:var(--veilbg);backdrop-filter:blur(4px);z-index:30;display:none;align-items:center;justify-content:center;padding:34px}
+  .success{position:absolute;inset:0;background:var(--veilbg);backdrop-filter:blur(4px);z-index:30;display:none;align-items:center;justify-content:center;padding:34px;isolation:isolate}
   .success.open{display:flex}
   .success-card{background:var(--card);border:1px solid var(--line2);border-radius:22px;padding:30px 24px;text-align:center;width:100%;max-width:300px}
   .success-check{width:78px;height:78px;border-radius:50%;background:var(--blue);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 10px rgba(232,54,45,.15)}
@@ -396,7 +396,7 @@
   .success .btn{width:100%;padding:13px}
 
   /* ================= payment flow ================= */
-  .pv{position:absolute;inset:0;background:var(--bg);transform:translateY(104%);transition:transform .32s cubic-bezier(.32,.72,.28,1);display:flex;flex-direction:column;overflow:hidden}
+  .pv{position:absolute;inset:0;background:var(--bg);transform:translateY(104%);transition:transform .32s cubic-bezier(.32,.72,.28,1);display:flex;flex-direction:column;overflow:hidden;isolation:isolate}
   .pv.open{transform:translateY(0)}
   #pay{z-index:26}#addcard{z-index:27}#passcode{z-index:28}
   .pv-scroll{flex:1;overflow-y:auto;padding:4px 20px 120px;scrollbar-width:none}
