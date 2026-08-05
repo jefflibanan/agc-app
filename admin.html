@@ -399,7 +399,7 @@ sb.auth.onAuthStateChange(async (event,session)=>{
 function currentSession(){
   return (authSession && authProfile && authProfile.is_admin) ? {email:authProfile.email, isOwner:!!authProfile.is_owner} : null;
 }
-async function signOutAdmin(){ await sb.auth.signOut(); authSession=null; authProfile=null; }
+async function signOutAdmin(){ try{ await sb.auth.signOut(); }catch(e){ console.error('signOut network call failed, clearing local session anyway',e); } authSession=null; authProfile=null; }
 
 function newCode(){
   let s='';const c='ABCDEFGHJKMNPQRSTUVWXYZ23456789';

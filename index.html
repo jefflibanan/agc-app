@@ -1686,7 +1686,7 @@ $('ba-email').addEventListener('keydown',e=>{if(e.key==='Enter')(state.baMode===
 $('ba-phone').addEventListener('keydown',e=>{if(e.key==='Enter')$('ba-pass').focus();});
 $('ba-pass').addEventListener('keydown',e=>{if(e.key==='Enter')(state.baMode==='signup'?$('ba-confirm').focus():$('ba-go').click());});
 async function buyerSignOut(){
-  await sb.auth.signOut();
+  try{ await sb.auth.signOut(); }catch(e){ console.error('signOut network call failed, clearing local session anyway',e); }
   authSession=null; authProfile=null;
   syncBuyerAuthRow();
   toast('Signed out');
