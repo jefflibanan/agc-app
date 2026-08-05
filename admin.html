@@ -1,0 +1,663 @@
+<title>AGC Event App Admin — Ticketing Console</title>
+<style>
+  :root{
+    --bg:#151516; --card:#1F1F22; --card2:#2A2A2E; --line:#2C2C31; --line2:#3B3B42;
+    --red:#E8362D; --red2:#FF6157; --red-deep:#B3221B;
+    --txt:#F7F6F5; --muted:#9C9CA3; --muted2:#6B6B73;
+    --ok:#35C46E; --warn:#E8C15A;
+    --sans:'Segoe UI',-apple-system,Roboto,'Helvetica Neue',Arial,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:var(--sans);background:#0C0A0A;color:var(--txt);min-height:100vh;
+    background-image:radial-gradient(900px 500px at 85% -10%,rgba(232,54,45,.10),transparent 55%)}
+  .shell{display:flex;min-height:100vh;max-width:1280px;margin:0 auto}
+
+  /* sidebar */
+  .side{width:225px;flex-shrink:0;border-right:1px solid var(--line);padding:22px 14px;display:flex;flex-direction:column;gap:4px}
+  .logo{font-size:17px;font-weight:800;padding:0 10px 4px}
+  .logo i{font-style:normal;color:var(--red2)}
+  .logo-sub{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted2);padding:0 10px 18px}
+  .snav{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:11px;border:none;background:none;color:var(--muted);
+    font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;text-align:left;width:100%;transition:all .15s}
+  .snav:hover{color:var(--txt);background:var(--card)}
+  .snav.on{background:rgba(232,54,45,.13);color:var(--red2)}
+  .snav svg{flex-shrink:0}
+  .side-foot{margin-top:auto;padding:12px;font-size:10.5px;color:var(--muted2);line-height:1.6}
+  .side-foot a{color:var(--red2);text-decoration:none}
+
+  /* main */
+  .main{flex:1;padding:24px 28px 60px;min-width:0}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;gap:14px;flex-wrap:wrap}
+  .topbar h1{font-size:20px;font-weight:800}
+  .topbar .sub{font-size:12px;color:var(--muted);margin-top:3px}
+  .top-actions{display:flex;gap:10px}
+  .btn{border:none;border-radius:100px;background:var(--red);color:#fff;font-size:12.5px;font-weight:700;font-family:var(--sans);cursor:pointer;padding:10px 18px;transition:background .15s}
+  .btn:hover{background:var(--red2)}
+  .btn.ghost{background:var(--card);border:1px solid var(--line2);color:var(--txt)}
+  .btn.ghost:hover{background:var(--card2)}
+  .btn.small{padding:7px 13px;font-size:11.5px}
+  .btn.danger{background:transparent;border:1px solid rgba(255,83,72,.45);color:var(--red2)}
+  .btn.danger:hover{background:rgba(232,54,45,.12)}
+  .btn:focus-visible{outline:2px solid var(--red2);outline-offset:2px}
+
+  .view{display:none}
+  .view.on{display:block}
+
+  /* stat cards */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:22px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .stat .k{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .stat .v{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+  .stat .d{font-size:11px;color:var(--muted);margin-top:5px}
+  .stat .v .up{color:var(--ok);font-size:12px;font-weight:700}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:18px}
+  .panel h2{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:900px){.grid2{grid-template-columns:1fr}.shell{flex-direction:column}.side{width:100%;flex-direction:row;flex-wrap:wrap;border-right:none;border-bottom:1px solid var(--line)}.snav{width:auto}.side-foot{display:none}}
+
+  /* brand bars */
+  .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12px}
+  .bar-row .bl{width:150px;flex-shrink:0;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:8px}
+  .bar-row .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+  .bar-track{flex:1;height:9px;background:var(--card2);border-radius:100px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:100px;transition:width .3s}
+  .bar-row .bv{width:90px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0}
+
+  /* tables */
+  .twrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px}
+  th{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:left;padding:9px 10px;border-bottom:1px solid var(--line2)}
+  td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  td b{font-variant-numeric:tabular-nums}
+  .code{font-family:Consolas,monospace;font-size:11.5px;color:var(--red2)}
+  .chip{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.06em;padding:4px 10px;border-radius:100px;white-space:nowrap}
+  .chip.ok{background:rgba(53,196,110,.13);color:#5FE099;border:1px solid rgba(53,196,110,.4)}
+  .chip.warn{background:rgba(232,193,90,.12);color:var(--warn);border:1px solid rgba(232,193,90,.4)}
+  .chip.mut{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--line2)}
+  .chip.red{background:rgba(232,54,45,.13);color:var(--red2);border:1px solid rgba(255,97,87,.4)}
+
+  /* forms */
+  .frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .fld label{display:block;font-size:11px;font-weight:600;margin-bottom:6px;color:var(--muted)}
+  .fld input,.fld select,.fld textarea{width:100%;background:var(--card2);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;color:var(--txt);font-size:12.5px;font-family:var(--sans);outline:none}
+  .fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--red)}
+  .fld.wide{grid-column:1/-1}
+  .frm-foot{grid-column:1/-1;display:flex;gap:10px;align-items:center}
+  .frm-msg{font-size:12px;color:var(--ok);font-weight:600}
+
+  /* check-in */
+  .ck-box{display:flex;gap:10px;max-width:480px}
+  .ck-box input{flex:1;background:var(--card2);border:1px solid var(--line2);border-radius:100px;padding:13px 18px;color:var(--txt);font-size:14px;font-family:Consolas,monospace;letter-spacing:.08em;outline:none;text-transform:uppercase}
+  .ck-box input:focus{border-color:var(--red)}
+  .ck-result{margin-top:16px;padding:16px;border-radius:14px;font-size:13px;line-height:1.6;display:none;max-width:480px}
+  .ck-result.good{display:block;background:rgba(53,196,110,.1);border:1px solid rgba(53,196,110,.4)}
+  .ck-result.bad{display:block;background:rgba(232,54,45,.1);border:1px solid rgba(255,97,87,.4)}
+  .ck-result.warn2{display:block;background:rgba(232,193,90,.1);border:1px solid rgba(232,193,90,.4)}
+  .ck-result b{font-size:15px}
+  .empty{padding:26px;text-align:center;color:var(--muted);font-size:12.5px;line-height:1.6}
+
+  /* modal */
+  .modal-veil{position:fixed;inset:0;background:rgba(4,3,2,.72);z-index:60;display:none;align-items:flex-start;justify-content:center;padding:50px 20px;overflow-y:auto}
+  .modal-veil.open{display:flex}
+  .modal{background:var(--card);border:1px solid var(--line2);border-radius:18px;padding:24px;max-width:660px;width:100%;box-shadow:0 30px 70px rgba(0,0,0,.5)}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .modal-head h2{font-size:16px;font-weight:800}
+  .modal-x{width:32px;height:32px;border-radius:50%;background:var(--card2);border:1px solid var(--line2);color:var(--txt);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center}
+  .modal-foot{display:flex;gap:10px;align-items:center;margin-top:18px;grid-column:1/-1;flex-wrap:wrap}
+  .hint{font-size:10.5px;color:var(--muted2);margin-top:5px}
+
+  /* login screen */
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .login-card{background:var(--card);border:1px solid var(--line2);border-radius:20px;padding:34px 30px;max-width:380px;width:100%;text-align:center}
+  .login-icon{width:58px;height:58px;border-radius:16px;background:rgba(232,54,45,.13);border:1px solid rgba(255,97,87,.35);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--red2)}
+  .login-card h1{font-size:18px;font-weight:800;margin-bottom:8px}
+  .login-card p{font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:20px}
+  .login-card .fld{text-align:left;margin-bottom:14px}
+  .login-err{font-size:11.5px;color:var(--red2);margin-top:-4px;margin-bottom:12px;display:none}
+  .side-divider{height:1px;background:var(--line);margin:10px 6px 12px}
+  .whoami{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
+  .whoami-ava{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--red2),var(--red-deep));color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .whoami-info{flex:1;min-width:0}
+  .whoami-k{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2)}
+  .whoami-email{font-size:11.5px;font-weight:700;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+  .logout-btn{display:flex;align-items:center;gap:7px;width:100%;margin-top:8px;background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);cursor:pointer;font-size:11.5px;font-weight:600;padding:8px 10px;font-family:var(--sans);transition:all .15s}
+  .logout-btn:hover{color:var(--red2);border-color:rgba(255,97,87,.4);background:rgba(232,54,45,.08)}
+  .logout-btn svg{flex-shrink:0}
+  .admin-row{display:flex;align-items:center;gap:12px;background:var(--card2);border:1px solid var(--line2);border-radius:12px;padding:11px 13px;margin-bottom:9px;font-size:12.5px}
+  .admin-row .ae{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .admin-add{display:flex;gap:10px;margin-bottom:16px}
+  .admin-add input{flex:1;background:var(--card2);border:1px solid var(--line2);border-radius:10px;padding:11px 13px;color:var(--txt);font-size:12.5px;font-family:var(--sans);outline:none}
+  .admin-add input:focus{border-color:var(--red)}
+</style>
+
+<div class="login-wrap" id="login-screen">
+  <div class="login-card">
+    <div class="login-icon">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/><path d="M17.5 11.5l1.6 1.6 3-3.2"/></svg>
+    </div>
+    <h1>Organizer sign-in</h1>
+    <p>Only admins added by email + password can open this console.<br>Demo build — first launch seeds <b style="color:var(--txt)">admin@agc.ph</b> / <b style="color:var(--txt)">agcadmin123</b>.</p>
+    <div class="fld"><label for="login-email">Admin email</label><input id="login-email" type="email" placeholder="you@brand.ph" autocomplete="off"></div>
+    <div class="fld"><label for="login-pass">Password</label><input id="login-pass" type="password" placeholder="••••••••" autocomplete="off"></div>
+    <div class="login-err" id="login-err">Incorrect email or password.</div>
+    <button class="btn" id="login-go" style="width:100%;padding:12px">Sign in</button>
+  </div>
+</div>
+
+<div class="shell" id="app-shell" style="display:none">
+  <aside class="side">
+    <div class="logo">AGC <i>Event App</i></div>
+    <div class="logo-sub">Organizer Console</div>
+    <button class="snav on" data-v="dash"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="11" rx="2"/><rect x="13" y="3" width="8" height="5" rx="2"/><rect x="13" y="10" width="8" height="11" rx="2"/><rect x="3" y="16" width="8" height="5" rx="2"/></svg>Dashboard</button>
+    <button class="snav" data-v="events"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Events</button>
+    <button class="snav" data-v="book"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4V7Z"/><path d="M13 7v10" stroke-dasharray="2 3"/></svg>Bookings</button>
+    <button class="snav" data-v="checkin"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12.5l3 3 5.5-6.5"/></svg>Check-in</button>
+    <button class="snav" data-v="admins"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16.5 8.5a2.6 2.6 0 1 0 0-5.2M20 20c0-2.7-1.7-4.8-4.2-5.4"/></svg>Admins</button>
+    <div class="side-divider"></div>
+    <div class="whoami">
+      <div class="whoami-ava" id="whoami-ava"></div>
+      <div class="whoami-info">
+        <div class="whoami-k">Signed in as</div>
+        <div class="whoami-email" id="whoami-email"></div>
+      </div>
+    </div>
+    <button class="logout-btn" id="logout-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      Sign out
+    </button>
+    <div class="side-foot">Demo console — data lives in this browser and syncs with the AGC Event App opened here. Wire to a real API for production.</div>
+  </aside>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <section class="view on" id="v-dash">
+      <div class="topbar">
+        <div><h1>Dashboard</h1><div class="sub" id="dash-sub"></div></div>
+        <div class="top-actions">
+          <button class="btn ghost" id="refresh">↻ Refresh</button>
+          <button class="btn" id="seed">Generate sample bookings</button>
+        </div>
+      </div>
+      <div class="stats" id="stat-cards"></div>
+      <div class="grid2">
+        <div class="panel"><h2>Revenue by brand</h2><div id="brand-bars"></div></div>
+        <div class="panel"><h2>Recent bookings</h2><div class="twrap"><table id="recent-tbl" style="min-width:420px"></table></div></div>
+      </div>
+    </section>
+
+    <!-- EVENTS -->
+    <section class="view" id="v-events">
+      <div class="topbar">
+        <div><h1>Events</h1><div class="sub">Pause an event to pull it from the app · create new events that go live instantly</div></div>
+      </div>
+      <div class="panel">
+        <h2>New event</h2>
+        <div class="frm">
+          <div class="fld"><label for="f-title">Title</label><input id="f-title" placeholder="e.g. MEGA Style Night"></div>
+          <div class="fld"><label for="f-brand">Brand</label><select id="f-brand"></select></div>
+          <div class="fld"><label for="f-date">Date (2026)</label><input id="f-date" type="date" min="2026-01-01" max="2026-12-31"></div>
+          <div class="fld"><label for="f-time">Doors open</label><input id="f-time" placeholder="7:00 PM"></div>
+          <div class="fld"><label for="f-venue">Venue</label><input id="f-venue" placeholder="Venue, City"></div>
+          <div class="fld"><label for="f-price">Price (₱/person)</label><input id="f-price" type="number" min="0" step="50" placeholder="1500"></div>
+          <div class="fld wide"><label for="f-about">Description</label><textarea id="f-about" rows="2" placeholder="What makes this event worth the ticket?"></textarea></div>
+          <div class="fld"><label for="f-img">Event photo</label><input id="f-img" type="file" accept="image/*" style="padding:8px 12px"></div>
+          <div class="fld wide" id="f-img-wrap" style="display:none"><img id="f-img-prev" alt="Event photo preview" style="width:100%;max-width:340px;height:150px;object-fit:cover;border-radius:12px;border:1px solid var(--line2)"></div>
+          <div class="frm-foot"><button class="btn" id="f-save">Publish event</button><span class="frm-msg" id="f-msg"></span></div>
+        </div>
+      </div>
+      <div class="panel"><h2>All events</h2><div class="twrap"><table id="ev-tbl"></table></div></div>
+    </section>
+
+    <!-- BOOKINGS -->
+    <section class="view" id="v-book">
+      <div class="topbar">
+        <div><h1>Bookings</h1><div class="sub" id="book-sub"></div></div>
+        <div class="top-actions"><button class="btn danger small" id="clear-samples">Clear sample bookings</button></div>
+      </div>
+      <div class="panel"><div class="twrap"><table id="book-tbl"></table></div></div>
+    </section>
+
+    <!-- CHECK-IN -->
+    <section class="view" id="v-checkin">
+      <div class="topbar">
+        <div><h1>Gate check-in</h1><div class="sub">Enter the booking reference from the ticket's QR screen</div></div>
+      </div>
+      <div class="panel">
+        <div class="ck-box">
+          <input id="ck-in" placeholder="FR-XXXX-XXXX" maxlength="12">
+          <button class="btn" id="ck-go">Check in</button>
+        </div>
+        <div class="ck-result" id="ck-result"></div>
+      </div>
+      <div class="panel"><h2>Checked in today</h2><div class="twrap"><table id="ck-tbl" style="min-width:420px"></table></div></div>
+    </section>
+
+    <!-- ADMINS -->
+    <section class="view" id="v-admins">
+      <div class="topbar">
+        <div><h1>Admins</h1><div class="sub">Only these email addresses can sign in to this console</div></div>
+      </div>
+      <div class="panel">
+        <h2>Add an admin</h2>
+        <div class="hint" style="margin-bottom:10px">Demo build — this is a client-side check, not real security. A production console needs server-side auth.</div>
+        <div class="admin-add">
+          <input id="admin-email" type="email" placeholder="teammate@brand.ph">
+          <input id="admin-pass" type="password" placeholder="Set a password">
+          <button class="btn" id="admin-add-btn">Add admin</button>
+        </div>
+        <div id="admin-list"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="modal-veil" id="edit-veil">
+  <div class="modal">
+    <div class="modal-head"><h2 id="edit-title-lbl">Edit event</h2><button class="modal-x" id="edit-close">✕</button></div>
+    <div class="frm">
+      <div class="fld"><label for="e-title">Title</label><input id="e-title"></div>
+      <div class="fld"><label for="e-brand">Brand</label><select id="e-brand"></select></div>
+      <div class="fld"><label for="e-date">Date (2026)</label><input id="e-date" type="date" min="2026-01-01" max="2026-12-31"></div>
+      <div class="fld"><label for="e-price">Price (₱/person)</label><input id="e-price" type="number" min="0" step="50"></div>
+      <div class="fld"><label for="e-time">Doors open</label><input id="e-time" placeholder="e.g. 7:00 PM onwards"><div class="hint">Leave blank to keep the current time</div></div>
+      <div class="fld"><label for="e-venue">Venue</label><input id="e-venue"></div>
+      <div class="fld wide"><label for="e-about">Description</label><textarea id="e-about" rows="2" placeholder="Leave blank to keep the current description"></textarea></div>
+      <div class="fld"><label for="e-img">Replace event photo</label><input id="e-img" type="file" accept="image/*" style="padding:8px 12px"><div class="hint">Leave empty to keep the current photo</div></div>
+      <div class="fld wide" id="e-img-wrap" style="display:none"><img id="e-img-prev" alt="" style="width:100%;max-width:340px;height:150px;object-fit:cover;border-radius:12px;border:1px solid var(--line2)"></div>
+      <div class="modal-foot">
+        <button class="btn" id="e-save">Save changes</button>
+        <button class="btn ghost" id="e-reset">Reset to original</button>
+        <button class="btn ghost" id="e-cancel">Cancel</button>
+        <span class="frm-msg" id="e-msg"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Same catalog as the app (id/brand/price/date must match index.html) */
+const BRANDS={
+  billboard:'Billboard Philippines', rolling:'Rolling Stone Philippines', game:'The GAME',
+  mega:'MEGA', vman:'VMAN SEA', delish:'Delish Philippines', bluprint:'BluPrint',
+  tbm:'The Business Manual', vogue:'Vogue Philippines', allure:'Allure Philippines'
+};
+const BASE_EVENTS=[
+  {id:1,b:'mega',title:'The MEGA Ball 2026',date:'Oct 3',venue:'Shangri-La The Fort, BGC',price:8000},
+  {id:2,b:'billboard',title:'Billboard PH Live: Mainstage',date:'Sep 12',venue:'Mall of Asia Arena, Pasay',price:2500},
+  {id:3,b:'vogue',title:'Vogue Gala: Terno Reimagined',date:'Nov 14',venue:'National Museum of Fine Arts, Manila',price:12000},
+  {id:4,b:'rolling',title:'Rolling Stone Sessions: Anniversary Night',date:'Aug 22',venue:'123 Block, Mandaluyong',price:1500},
+  {id:5,b:'game',title:'The GAME Fight Night',date:'Sep 5',venue:'Araneta Coliseum, Quezon City',price:1800},
+  {id:6,b:'allure',title:'Allure Beauty Summit',date:'Aug 29',venue:'Samsung Hall, SM Aura, BGC',price:950},
+  {id:7,b:'delish',title:'Delish Food Crawl: BGC Edition',date:'Sep 19',venue:'Bonifacio High Street, BGC',price:1200},
+  {id:8,b:'bluprint',title:'BluPrint Design Forum',date:'Oct 10',venue:'SMX Convention Center, Pasay',price:2200},
+  {id:9,b:'tbm',title:'Founders Summit 2026',date:'Sep 26',venue:'Grand Hyatt Manila, BGC',price:4500},
+  {id:10,b:'vman',title:'VMAN SEA Cover Launch',date:'Aug 15',venue:'The Island, BGC',price:1000},
+  {id:11,b:'billboard',title:'Charting: Songwriters’ Camp',date:'Sep 30',venue:'Kantana Studios, Makati',price:800},
+  {id:12,b:'game',title:'Manila Clash: Esports Finals',date:'Oct 24',venue:'SM Mall of Asia Arena, Pasay',price:600},
+  {id:13,b:'billboard',title:'Filipino Music Awards 2026',date:'Oct 21',venue:'Mall of Asia Arena, Pasay',price:3000},
+];
+const K_CUSTOM='frontrow_events_custom', K_PAUSED='frontrow_paused', K_DEMO='frontrow_admin_demo', K_CKS='frontrow_checkins', K_APP='frontrow_v1',
+      K_OVR='frontrow_events_overrides', K_ADMINS='frontrow_admins', K_SESSION='frontrow_admin_session';
+const peso=n=>'₱'+n.toLocaleString('en-PH');
+const $=id=>document.getElementById(id);
+const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const BRAND_COLORS={
+  billboard:'#E8362D', rolling:'#F2994A', game:'#35C46E', mega:'#E8C15A', vman:'#8E7CFF',
+  delish:'#FF8B5E', bluprint:'#4D82FF', tbm:'#34B3A6', vogue:'#D98CD1', allure:'#FF6F91'
+};
+const NAMES=['Miguel Santos','Ana Reyes','Paolo Cruz','Bianca Lim','Jae Villanueva','Kat dela Rosa','Marco Tan','Iya Ramos','Dre Bautista','Cess Aquino','Nico Garcia','Lea Mendoza'];
+
+function overridesMap(){ return load(K_OVR,{}); }
+function allEvents(){
+  const ovr=overridesMap();
+  return BASE_EVENTS.concat(load(K_CUSTOM,[])).map(e=>ovr[e.id]?{...e,...ovr[e.id]}:e);
+}
+function evById(id){ return allEvents().find(e=>e.id===id); }
+function dateToInputVal(dateStr){
+  const d=new Date(dateStr+', 2026');
+  return d.toISOString().slice(0,10);
+}
+
+/* ---------- admins + session ---------- */
+function adminsList(){
+  let a=load(K_ADMINS,null);
+  if(!a){ a=[{email:'admin@agc.ph', password:'agcadmin123', owner:true, addedAt:Date.now()}]; save(K_ADMINS,a); }
+  const owner=a.find(x=>x.owner);
+  if(owner && !owner.password){ owner.password='agcadmin123'; save(K_ADMINS,a); }
+  return a;
+}
+function isAdminEmail(email){
+  return adminsList().some(a=>a.email.toLowerCase()===email.toLowerCase());
+}
+const OWNER_EMAIL='admin@agc.ph', OWNER_PASS='agcadmin123';
+function checkCredentials(email,password){
+  email=(email||'').trim(); password=(password||'').trim();
+  if(email.toLowerCase()===OWNER_EMAIL && password===OWNER_PASS) return true;
+  return adminsList().some(a=>a.email.toLowerCase()===email.toLowerCase() && a.password===password);
+}
+function currentSession(){ return load(K_SESSION,null); }
+function setSession(email){ save(K_SESSION,{email,since:Date.now()}); }
+function clearSession(){ localStorage.removeItem(K_SESSION); }
+function newCode(){
+  let s='';const c='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  for(let i=0;i<8;i++)s+=c[Math.floor(Math.random()*c.length)];
+  return 'FR-'+s.slice(0,4)+'-'+s.slice(4);
+}
+/* bookings = app purchases (this browser) + generated samples */
+function allBookings(){
+  const app=(load(K_APP,{}).tickets||[]).map(t=>({...t, buyer:'App user (this device)', src:'app'}));
+  const demo=load(K_DEMO,[]).map(t=>({...t, src:'sample'}));
+  return app.concat(demo).filter(t=>evById(t.id)).sort((a,b)=>(b.ts||0)-(a.ts||0));
+}
+const gross=list=>list.reduce((s,t)=>s+(evById(t.id)?.price||0)*t.qty,0);
+const seats=list=>list.reduce((s,t)=>s+t.qty,0);
+
+/* ---------- views ---------- */
+document.querySelectorAll('.snav').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('.snav').forEach(x=>x.classList.toggle('on',x===b));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+    $('v-'+b.dataset.v).classList.add('on');
+  };
+});
+
+function renderDash(){
+  const bk=allBookings(), paused=new Set(load(K_PAUSED,[]));
+  const live=allEvents().filter(e=>!paused.has(e.id)).length;
+  $('dash-sub').textContent=new Date().toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric', year:'numeric'});
+  $('stat-cards').innerHTML=`
+    <div class="stat"><div class="k">Gross revenue</div><div class="v">${peso(gross(bk))}</div><div class="d">across ${bk.length} bookings</div></div>
+    <div class="stat"><div class="k">Tickets sold</div><div class="v">${seats(bk)}</div><div class="d">${bk.filter(b=>b.src==='app').length} from the live app</div></div>
+    <div class="stat"><div class="k">Events on sale</div><div class="v">${live}</div><div class="d">${allEvents().length-live} paused</div></div>
+    <div class="stat"><div class="k">Checked in</div><div class="v">${load(K_CKS,[]).length}</div><div class="d">at the gate</div></div>`;
+  // brand bars
+  const byBrand={};
+  bk.forEach(t=>{const e=evById(t.id); byBrand[e.b]=(byBrand[e.b]||0)+e.price*t.qty;});
+  const rows=Object.entries(byBrand).sort((a,b)=>b[1]-a[1]);
+  const max=rows[0]?.[1]||1;
+  $('brand-bars').innerHTML=rows.length?rows.map(([b,v])=>{
+    const c=BRAND_COLORS[b]||'var(--red2)';
+    return `<div class="bar-row"><span class="bl"><span class="dot" style="background:${c}"></span>${BRANDS[b]}</span>
+    <span class="bar-track"><span class="bar-fill" style="width:${Math.max(4,v/max*100)}%;background:${c}"></span></span>
+    <span class="bv">${peso(v)}</span></div>`;
+  }).join('')
+    :'<div class="empty">No sales yet — book in the app or generate samples.</div>';
+  // recent
+  const cks=new Set(load(K_CKS,[]).map(c=>c.code));
+  $('recent-tbl').innerHTML='<tr><th>Code</th><th>Event</th><th>Qty</th><th>Amount</th></tr>'+
+    (bk.slice(0,8).map(t=>{const e=evById(t.id);return `<tr><td class="code">${t.code||'—'}</td><td>${e.title}</td><td><b>${t.qty}</b></td><td><b>${peso(e.price*t.qty)}</b></td></tr>`;}).join('')||'<tr><td colspan="4"><div class="empty">Nothing yet.</div></td></tr>');
+}
+
+function renderEvents(){
+  const paused=new Set(load(K_PAUSED,[]));
+  const custom=load(K_CUSTOM,[]);
+  const ovr=overridesMap();
+  const bk=allBookings();
+  const sold=id=>seats(bk.filter(t=>t.id===id));
+  $('ev-tbl').innerHTML='<tr><th>Event</th><th>Brand</th><th>Date</th><th>Price</th><th>Sold</th><th>Revenue</th><th>Status</th><th></th></tr>'+
+    allEvents().map(e=>{
+      const isP=paused.has(e.id), isC=custom.some(c=>c.id===e.id), isEdited=!!ovr[e.id];
+      return `<tr>
+        <td><span style="display:flex;align-items:center;gap:9px">${e.img?`<img src="${e.img}" alt="" style="width:40px;height:28px;border-radius:6px;object-fit:cover;border:1px solid var(--line2)">`:''}<b>${e.title}</b>${isC?' <span class="chip red">NEW</span>':''}${(!isC&&isEdited)?' <span class="chip warn">EDITED</span>':''}</span></td>
+        <td>${BRANDS[e.b]}</td><td>${e.date}</td><td>${peso(e.price)}</td>
+        <td><b>${sold(e.id)}</b></td><td><b>${peso(sold(e.id)*e.price)}</b></td>
+        <td><span class="chip ${isP?'mut':'ok'}">${isP?'PAUSED':'ON SALE'}</span></td>
+        <td style="white-space:nowrap">
+          <button class="btn ghost small" data-edit="${e.id}">Edit</button>
+          <button class="btn ghost small" data-pause="${e.id}">${isP?'Resume':'Pause'}</button>
+          ${isC?`<button class="btn danger small" data-del="${e.id}">Delete</button>`:''}
+        </td></tr>`;
+    }).join('');
+  document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEdit(+b.dataset.edit));
+  document.querySelectorAll('[data-pause]').forEach(b=>b.onclick=()=>{
+    const id=+b.dataset.pause, p=load(K_PAUSED,[]);
+    p.includes(id)?save(K_PAUSED,p.filter(x=>x!==id)):save(K_PAUSED,[...p,id]);
+    renderAll();
+  });
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    const id=+b.dataset.del;
+    save(K_CUSTOM,load(K_CUSTOM,[]).filter(c=>c.id!==id));
+    const ov=overridesMap(); delete ov[id]; save(K_OVR,ov);
+    renderAll();
+  });
+}
+
+/* ---------- edit modal ---------- */
+(function(){
+  const sel=$('e-brand');
+  Object.entries(BRANDS).forEach(([id,n])=>{const o=document.createElement('option');o.value=id;o.textContent=n;sel.appendChild(o);});
+})();
+let editId=null, editImg=null;
+function openEdit(id){
+  editId=id; editImg=null;
+  const e=evById(id);
+  $('edit-title-lbl').textContent='Edit — '+e.title;
+  $('e-title').value=e.title;
+  $('e-brand').value=e.b;
+  $('e-date').value=dateToInputVal(e.date);
+  $('e-price').value=e.price;
+  $('e-time').value='';
+  $('e-venue').value=e.venue;
+  $('e-about').value='';
+  $('e-img-wrap').style.display=e.img?'block':'none';
+  if(e.img) $('e-img-prev').src=e.img;
+  $('e-msg').textContent='';
+  $('edit-veil').classList.add('open');
+}
+$('edit-close').onclick=$('e-cancel').onclick=()=>{ $('edit-veil').classList.remove('open'); };
+$('edit-veil').addEventListener('click',e=>{ if(e.target.id==='edit-veil') $('edit-veil').classList.remove('open'); });
+$('e-img').addEventListener('change',ev=>{
+  const f=ev.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    const im=new Image();
+    im.onload=()=>{
+      const c=document.createElement('canvas');
+      const w=Math.min(640,im.width);
+      c.width=w; c.height=Math.round(im.height*(w/im.width));
+      c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+      editImg=c.toDataURL('image/jpeg',.62);
+      $('e-img-wrap').style.display='block';
+      $('e-img-prev').src=editImg;
+    };
+    im.src=rd.result;
+  };
+  rd.readAsDataURL(f);
+});
+$('e-save').onclick=()=>{
+  const title=$('e-title').value.trim(), b=$('e-brand').value, dt=$('e-date').value,
+        venue=$('e-venue').value.trim(), price=parseInt($('e-price').value,10),
+        time=$('e-time').value.trim(), about=$('e-about').value.trim();
+  if(!title||!dt||!venue||!(price>=0)){ $('e-msg').style.color='var(--red2)'; $('e-msg').textContent='Fill in title, date, venue, and price.'; return; }
+  const d=new Date(dt+'T00:00:00');
+  const mo=d.toLocaleDateString('en-US',{month:'short'}), da=String(d.getDate());
+  const patch={title, b, date:mo+' '+da, mo, da, venue, price};
+  if(time) patch.time=time;
+  if(about) patch.about=about;
+  if(editImg) patch.img=editImg;
+  const ov=overridesMap();
+  ov[editId]={...(ov[editId]||{}), ...patch};
+  save(K_OVR,ov);
+  $('edit-veil').classList.remove('open');
+  renderAll();
+};
+$('e-reset').onclick=()=>{
+  const ov=overridesMap();
+  if(ov[editId]){ delete ov[editId]; save(K_OVR,ov); }
+  $('edit-veil').classList.remove('open');
+  renderAll();
+};
+
+function renderBook(){
+  const bk=allBookings();
+  const cks=new Set(load(K_CKS,[]).map(c=>c.code));
+  $('book-sub').textContent=`${bk.length} bookings · ${seats(bk)} tickets · ${peso(gross(bk))} gross`;
+  $('book-tbl').innerHTML='<tr><th>Code</th><th>Buyer</th><th>Event</th><th>Qty</th><th>Amount</th><th>Source</th><th>Status</th></tr>'+
+    (bk.map(t=>{const e=evById(t.id);
+      return `<tr><td class="code">${t.code||'—'}</td><td>${t.buyer||'—'}</td><td>${e.title}</td>
+      <td><b>${t.qty}</b></td><td><b>${peso(e.price*t.qty)}</b></td>
+      <td><span class="chip ${t.src==='app'?'red':'mut'}">${t.src==='app'?'LIVE APP':'SAMPLE'}</span></td>
+      <td><span class="chip ${cks.has(t.code)?'ok':'warn'}">${cks.has(t.code)?'CHECKED IN':'NOT ARRIVED'}</span></td></tr>`;
+    }).join('')||'<tr><td colspan="7"><div class="empty">No bookings yet — buy a ticket in the app (same browser) or generate samples.</div></td></tr>');
+}
+
+function renderCk(){
+  const cks=load(K_CKS,[]);
+  $('ck-tbl').innerHTML='<tr><th>Code</th><th>Event</th><th>Qty</th><th>Time</th></tr>'+
+    (cks.slice().reverse().map(c=>`<tr><td class="code">${c.code}</td><td>${c.event}</td><td><b>${c.qty}</b></td><td>${new Date(c.ts).toLocaleTimeString()}</td></tr>`).join('')||'<tr><td colspan="4"><div class="empty">No check-ins yet.</div></td></tr>');
+}
+$('ck-go').onclick=doCheckin;
+$('ck-in').addEventListener('keydown',e=>{if(e.key==='Enter')doCheckin();});
+function doCheckin(){
+  const code=$('ck-in').value.trim().toUpperCase();
+  const r=$('ck-result');
+  if(!code){r.className='ck-result';return;}
+  const bk=allBookings().find(t=>(t.code||'').toUpperCase()===code);
+  const cks=load(K_CKS,[]);
+  if(!bk){
+    r.className='ck-result bad';
+    r.innerHTML=`<b>✕ Not found</b><br>No booking matches <span class="code">${code}</span>. Check the code on the ticket's QR screen.`;
+  }else if(cks.some(c=>c.code===bk.code)){
+    r.className='ck-result warn2';
+    r.innerHTML=`<b>⚠ Already used</b><br><span class="code">${bk.code}</span> was checked in earlier — each code admits once.`;
+  }else{
+    const e=evById(bk.id);
+    cks.push({code:bk.code,event:e.title,qty:bk.qty,ts:Date.now()});
+    save(K_CKS,cks);
+    r.className='ck-result good';
+    r.innerHTML=`<b>✓ Welcome in!</b><br>${e.title} — <b>${bk.qty}</b> ticket${bk.qty!==1?'s':''} · ${bk.buyer||'guest'}<br><span class="code">${bk.code}</span> marked as used.`;
+  }
+  $('ck-in').value='';
+  renderAll();
+}
+
+/* new event form */
+(function(){
+  const sel=$('f-brand');
+  Object.entries(BRANDS).forEach(([id,n])=>{const o=document.createElement('option');o.value=id;o.textContent=n;sel.appendChild(o);});
+})();
+var fImg=null;
+$('f-img').addEventListener('change',ev=>{
+  const f=ev.target.files[0];
+  if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    const im=new Image();
+    im.onload=()=>{
+      const c=document.createElement('canvas');
+      const w=Math.min(640,im.width);
+      c.width=w; c.height=Math.round(im.height*(w/im.width));
+      c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+      fImg=c.toDataURL('image/jpeg',.62);
+      $('f-img-wrap').style.display='block';
+      $('f-img-prev').src=fImg;
+    };
+    im.src=rd.result;
+  };
+  rd.readAsDataURL(f);
+});
+$('f-save').onclick=()=>{
+  const title=$('f-title').value.trim(), b=$('f-brand').value, dt=$('f-date').value,
+        time=$('f-time').value.trim()||'7:00 PM', venue=$('f-venue').value.trim(),
+        price=parseInt($('f-price').value,10), about=$('f-about').value.trim();
+  const msg=$('f-msg');
+  if(!title||!dt||!venue||!(price>=0)){ msg.style.color='var(--red2)'; msg.textContent='Fill in title, date, venue, and price.'; return; }
+  const d=new Date(dt+'T00:00:00');
+  const date=d.toLocaleDateString('en-US',{month:'short'})+' '+d.getDate();
+  const custom=load(K_CUSTOM,[]);
+  const maxId=Math.max(100,...BASE_EVENTS.map(e=>e.id),...custom.map(c=>c.id));
+  custom.push({id:maxId+1, b, title, date, venue, price, time:time+' onwards', about, img:fImg, booked:String(Math.floor(Math.random()*400+40))});
+  save(K_CUSTOM,custom);
+  msg.style.color='var(--ok)'; msg.textContent=`Published! “${title}” is now live in the app${fImg?' with its photo':''}.`;
+  ['f-title','f-date','f-venue','f-price','f-about','f-time','f-img'].forEach(i=>$(i).value='');
+  fImg=null; $('f-img-wrap').style.display='none';
+  renderAll();
+};
+
+/* samples */
+$('seed').onclick=()=>{
+  const demo=load(K_DEMO,[]);
+  const evs=allEvents();
+  for(let i=0;i<20;i++){
+    const e=evs[Math.floor(Math.random()*evs.length)];
+    demo.push({id:e.id, qty:1+Math.floor(Math.random()*4), code:newCode(),
+      ts:Date.now()-Math.floor(Math.random()*6.048e8),
+      buyer:NAMES[Math.floor(Math.random()*NAMES.length)]});
+  }
+  save(K_DEMO,demo);
+  renderAll();
+};
+$('clear-samples').onclick=()=>{ save(K_DEMO,[]); renderAll(); };
+$('refresh').onclick=()=>renderAll();
+
+/* ---------- admins view ---------- */
+function renderAdmins(){
+  const admins=adminsList();
+  const wrap=$('admin-list'); wrap.innerHTML='';
+  admins.forEach(a=>{
+    const row=document.createElement('div');
+    row.className='admin-row';
+    row.innerHTML=`<span class="ae">${a.email}</span>${a.owner?'<span class="chip red">OWNER</span>':'<span class="chip mut">ADMIN</span>'}${a.owner?'':'<button class="btn danger small" data-rm="'+a.email+'">Remove</button>'}`;
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{
+    const email=b.dataset.rm;
+    const sess=currentSession();
+    if(sess && sess.email.toLowerCase()===email.toLowerCase()){ alert('You can\'t remove the admin you\'re currently signed in as.'); return; }
+    save(K_ADMINS,adminsList().filter(a=>a.email.toLowerCase()!==email.toLowerCase()));
+    renderAdmins();
+  });
+}
+$('admin-add-btn').onclick=()=>{
+  const email=$('admin-email').value.trim(), pass=$('admin-pass').value;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('Enter a valid email address.'); return; }
+  if(pass.length<6){ alert('Password needs at least 6 characters.'); return; }
+  const admins=adminsList();
+  if(admins.some(a=>a.email.toLowerCase()===email.toLowerCase())){ alert('That email is already an admin.'); return; }
+  admins.push({email, password:pass, owner:false, addedAt:Date.now()});
+  save(K_ADMINS,admins);
+  $('admin-email').value=''; $('admin-pass').value='';
+  renderAdmins();
+};
+$('admin-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('admin-pass').focus();});
+$('admin-pass').addEventListener('keydown',e=>{if(e.key==='Enter')$('admin-add-btn').click();});
+
+function renderAll(){ renderDash(); renderEvents(); renderBook(); renderCk(); renderAdmins(); }
+
+/* ---------- sign-in gate ---------- */
+function showLogin(){
+  $('login-screen').style.display='flex';
+  $('app-shell').style.display='none';
+  $('login-err').style.display='none';
+  $('login-email').value=''; $('login-pass').value='';
+}
+function showShell(){
+  const s=currentSession();
+  $('login-screen').style.display='none';
+  $('app-shell').style.display='flex';
+  $('whoami-email').textContent=s.email;
+  $('whoami-ava').textContent=s.email.slice(0,2).toUpperCase();
+  renderAll();
+}
+function attemptLogin(){
+  const email=$('login-email').value.trim(), pass=$('login-pass').value;
+  if(email && pass && checkCredentials(email,pass)){
+    setSession(email);
+    showShell();
+  }else{
+    $('login-err').style.display='block';
+  }
+}
+$('login-go').onclick=attemptLogin;
+$('login-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('login-pass').focus();});
+$('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')attemptLogin();});
+$('logout-btn').onclick=()=>{ clearSession(); showLogin(); };
+
+adminsList(); // seed on first run
+currentSession() ? showShell() : showLogin();
+</script>
