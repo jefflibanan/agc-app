@@ -132,6 +132,7 @@
     <button class="snav" data-v="events"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Events</button>
     <button class="snav" data-v="book"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4V7Z"/><path d="M13 7v10" stroke-dasharray="2 3"/></svg>Bookings</button>
     <button class="snav" data-v="checkin"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12.5l3 3 5.5-6.5"/></svg>Check-in</button>
+    <button class="snav" data-v="members"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="9" r="3.2"/><circle cx="17" cy="10" r="2.6"/><path d="M2.5 20c0-3.4 2.5-5.8 5.5-5.8s5.5 2.4 5.5 5.8"/><path d="M14.5 14.6c2.6.2 4.5 2.4 4.5 5.4"/></svg>Members</button>
     <button class="snav" data-v="admins"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16.5 8.5a2.6 2.6 0 1 0 0-5.2M20 20c0-2.7-1.7-4.8-4.2-5.4"/></svg>Admins</button>
     <div class="side-divider"></div>
     <div class="whoami">
@@ -211,6 +212,14 @@
       <div class="panel"><h2>Checked in today</h2><div class="twrap"><table id="ck-tbl" style="min-width:420px"></table></div></div>
     </section>
 
+    <!-- MEMBERS -->
+    <section class="view" id="v-members">
+      <div class="topbar">
+        <div><h1>Members</h1><div class="sub" id="members-sub">Buyers who created an account (guest checkouts aren't listed here)</div></div>
+      </div>
+      <div class="panel"><div class="twrap"><table id="members-tbl"></table></div></div>
+    </section>
+
     <!-- ADMINS -->
     <section class="view" id="v-admins">
       <div class="topbar">
@@ -250,6 +259,23 @@
         <button class="btn" id="e-save">Save changes</button>
         <button class="btn ghost" id="e-cancel">Cancel</button>
         <span class="frm-msg" id="e-msg"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-veil" id="member-edit-veil">
+  <div class="modal">
+    <div class="modal-head"><h2>Edit member</h2><button class="modal-x" id="member-edit-close">✕</button></div>
+    <div class="frm">
+      <div class="fld wide"><label>Email</label><input id="m-email" disabled style="opacity:.6"></div>
+      <div class="fld"><label for="m-name">Display name</label><input id="m-name"></div>
+      <div class="fld"><label for="m-phone">Phone</label><input id="m-phone"></div>
+      <div class="fld wide"><label for="m-city">City</label><input id="m-city"></div>
+      <div class="modal-foot">
+        <button class="btn" id="m-save">Save changes</button>
+        <button class="btn ghost" id="m-cancel">Cancel</button>
+        <span class="frm-msg" id="m-msg"></span>
       </div>
     </div>
   </div>
@@ -674,7 +700,52 @@ $('admin-add-btn').onclick=async ()=>{
 };
 $('admin-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('admin-add-btn').click();});
 
-function renderAll(){ renderDash(); renderEvents(); renderBook(); renderCk(); renderAdmins(); }
+/* ---------- members (buyer accounts) ---------- */
+let MEMBERS=[];
+async function renderMembers(){
+  const { data, error } = await sb.from('profiles').select('id,email,name,city,phone,created_at').eq('is_admin',false).order('created_at',{ascending:false});
+  if(error){ $('members-tbl').innerHTML='<tr><td class="empty">Could not load members: '+error.message+'</td></tr>'; return; }
+  MEMBERS=data||[];
+  $('members-sub').textContent=MEMBERS.length+' account'+(MEMBERS.length===1?'':'s')+' signed up · guest checkouts aren\'t listed here';
+  const tbl=$('members-tbl');
+  if(!MEMBERS.length){ tbl.innerHTML='<tr><td class="empty">No one has signed up for an account yet.</td></tr>'; return; }
+  tbl.innerHTML=`<tr><th>Name</th><th>Email</th><th>Phone</th><th>City</th><th>Signed up</th><th></th></tr>`+
+    MEMBERS.map(m=>`<tr>
+      <td>${m.name||'<span style="color:var(--muted)">—</span>'}</td>
+      <td>${m.email}</td>
+      <td>${m.phone||'<span style="color:var(--muted)">—</span>'}</td>
+      <td>${m.city||'<span style="color:var(--muted)">—</span>'}</td>
+      <td>${new Date(m.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
+      <td><button class="btn ghost small" data-edit-member="${m.id}">Edit</button></td>
+    </tr>`).join('');
+  tbl.querySelectorAll('[data-edit-member]').forEach(b=>b.onclick=()=>openMemberEdit(b.dataset.editMember));
+}
+function openMemberEdit(id){
+  const m=MEMBERS.find(x=>x.id===id);
+  if(!m) return;
+  $('member-edit-veil').dataset.id=id;
+  $('m-email').value=m.email;
+  $('m-name').value=m.name||'';
+  $('m-phone').value=m.phone||'';
+  $('m-city').value=m.city||'';
+  $('m-msg').textContent='';
+  $('member-edit-veil').classList.add('open');
+}
+$('member-edit-close').onclick=$('m-cancel').onclick=()=>{ $('member-edit-veil').classList.remove('open'); };
+$('member-edit-veil').addEventListener('click',e=>{ if(e.target.id==='member-edit-veil') $('member-edit-veil').classList.remove('open'); });
+$('m-save').onclick=async ()=>{
+  const id=$('member-edit-veil').dataset.id;
+  const btn=$('m-save'); btn.disabled=true; btn.textContent='Saving…';
+  const { error }=await sb.rpc('admin_update_member',{
+    target_id:id, p_name:$('m-name').value.trim()||null, p_city:$('m-city').value.trim()||null, p_phone:$('m-phone').value.trim()||null
+  });
+  btn.disabled=false; btn.textContent='Save changes';
+  if(error){ $('m-msg').style.color='var(--red2)'; $('m-msg').textContent=error.message; return; }
+  $('member-edit-veil').classList.remove('open');
+  renderMembers();
+};
+
+function renderAll(){ renderDash(); renderEvents(); renderBook(); renderCk(); renderAdmins(); renderMembers(); }
 
 /* ---------- sign-in gate ---------- */
 function goToSignIn(){ location.replace('sign-in.html'); }

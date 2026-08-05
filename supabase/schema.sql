@@ -193,6 +193,23 @@ begin
 end;
 $$;
 
+-- Lets an admin edit a buyer's display info from the Members tab, without
+-- touching is_admin/is_owner/email — same escalation-safe pattern as above.
+create or replace function public.admin_update_member(target_id uuid, p_name text, p_city text, p_phone text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_admin() then
+    raise exception 'Only admins can edit member profiles';
+  end if;
+  update profiles set name = p_name, city = p_city, phone = p_phone
+  where id = target_id and is_admin = false;
+end;
+$$;
+
 -- A buyer's own device looks up its tickets by the codes it already has saved locally.
 -- Safe to expose publicly: a code is only known to whoever received that specific ticket.
 create or replace function public.get_bookings_by_codes(codes text[])
