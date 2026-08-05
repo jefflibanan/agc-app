@@ -108,14 +108,6 @@
   .modal-foot{display:flex;gap:10px;align-items:center;margin-top:18px;grid-column:1/-1;flex-wrap:wrap}
   .hint{font-size:10.5px;color:var(--muted2);margin-top:5px}
 
-  /* login screen */
-  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-  .login-card{background:var(--card);border:1px solid var(--line2);border-radius:20px;padding:34px 30px;max-width:380px;width:100%;text-align:center}
-  .login-icon{width:58px;height:58px;border-radius:16px;background:rgba(232,54,45,.13);border:1px solid rgba(255,97,87,.35);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--red2)}
-  .login-card h1{font-size:18px;font-weight:800;margin-bottom:8px}
-  .login-card p{font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:20px}
-  .login-card .fld{text-align:left;margin-bottom:14px}
-  .login-err{font-size:11.5px;color:var(--red2);margin-top:-4px;margin-bottom:12px;display:none}
   .side-divider{height:1px;background:var(--line);margin:10px 6px 12px}
   .whoami{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
   .whoami-ava{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--red2),var(--red-deep));color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -131,22 +123,6 @@
   .admin-add input{flex:1;background:var(--card2);border:1px solid var(--line2);border-radius:10px;padding:11px 13px;color:var(--txt);font-size:12.5px;font-family:var(--sans);outline:none}
   .admin-add input:focus{border-color:var(--red)}
 </style>
-
-<div class="login-wrap" id="login-screen">
-  <div class="login-card">
-    <div class="login-icon">
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/><path d="M17.5 11.5l1.6 1.6 3-3.2"/></svg>
-    </div>
-    <h1 id="login-heading">Organizer sign-in</h1>
-    <p id="login-sub">Real Supabase account required. Been invited by an admin? <a id="login-toggle-signup" style="color:var(--red2);cursor:pointer">Create your account</a> instead.</p>
-    <div class="fld"><label for="login-email">Email</label><input id="login-email" type="email" placeholder="you@brand.ph" autocomplete="off"></div>
-    <div class="fld"><label for="login-pass">Password</label><input id="login-pass" type="password" placeholder="••••••••" autocomplete="off"></div>
-    <div class="fld" id="login-confirm-wrap" style="display:none"><label for="login-confirm">Confirm password</label><input id="login-confirm" type="password" placeholder="••••••••" autocomplete="off"></div>
-    <div class="login-err" id="login-err">Incorrect email or password.</div>
-    <div class="login-err" id="login-info" style="color:var(--ok)"></div>
-    <button class="btn" id="login-go" style="width:100%;padding:12px">Sign in</button>
-  </div>
-</div>
 
 <div class="shell" id="app-shell" style="display:none">
   <aside class="side">
@@ -406,28 +382,11 @@ sb.auth.onAuthStateChange(async (event,session)=>{
   }catch(e){ console.log('[auth-debug] onAuthStateChange handler threw:', e); authProfile=null; }
   finally{
     if(!authReady){ authReady=true; resolveAuthReady(); console.log('[auth-debug] authReady resolved, authProfile:', authProfile); }
-    else{ currentSession() ? showShell() : showLogin(); }
+    else{ currentSession() ? showShell() : goToSignIn(); }
   }
 });
 function currentSession(){
   return (authSession && authProfile && authProfile.is_admin) ? {email:authProfile.email, isOwner:!!authProfile.is_owner} : null;
-}
-async function signInAdmin(email,password){
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-  if(error) return {ok:false, msg:error.message};
-  const { data:prof } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',data.user.id).single();
-  if(!prof || !prof.is_admin){ await sb.auth.signOut(); return {ok:false, msg:'That account exists but isn’t an admin.'}; }
-  authSession=data.session; authProfile=prof;
-  return {ok:true};
-}
-async function signUpAdmin(email,password){
-  const { data, error } = await sb.auth.signUp({ email, password });
-  if(error) return {ok:false, msg:error.message};
-  if(!data.session) return {ok:false, msg:'Account created — check your email to confirm it, then sign in.', info:true};
-  const { data:prof } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',data.user.id).single();
-  if(!prof || !prof.is_admin){ await sb.auth.signOut(); return {ok:false, msg:'Account created, but this email wasn’t invited as an admin yet.'}; }
-  authSession=data.session; authProfile=prof;
-  return {ok:true};
 }
 async function signOutAdmin(){ await sb.auth.signOut(); authSession=null; authProfile=null; }
 
@@ -707,26 +666,7 @@ $('admin-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('admin-add-
 function renderAll(){ renderDash(); renderEvents(); renderBook(); renderCk(); renderAdmins(); }
 
 /* ---------- sign-in gate ---------- */
-let loginMode='signin';
-function syncLoginMode(){
-  const su=loginMode==='signup';
-  $('login-heading').textContent = su ? 'Create your organizer account' : 'Organizer sign-in';
-  $('login-confirm-wrap').style.display = su ? 'block' : 'none';
-  $('login-go').textContent = su ? 'Create account' : 'Sign in';
-  $('login-sub').innerHTML = su
-    ? 'Only works if an existing admin already invited this email. <a id="login-toggle-signup" style="color:var(--red2);cursor:pointer">Sign in instead</a>.'
-    : 'Real Supabase account required. Been invited by an admin? <a id="login-toggle-signup" style="color:var(--red2);cursor:pointer">Create your account</a> instead.';
-  $('login-toggle-signup').onclick=()=>{ loginMode = su?'signin':'signup'; syncLoginMode(); };
-  $('login-err').style.display='none'; $('login-info').style.display='none';
-}
-$('login-toggle-signup').onclick=()=>{ loginMode='signup'; syncLoginMode(); };
-function showLogin(){
-  $('login-screen').style.display='flex';
-  $('app-shell').style.display='none';
-  $('login-err').style.display='none'; $('login-info').style.display='none';
-  $('login-email').value=''; $('login-pass').value=''; $('login-confirm').value='';
-  loginMode='signin'; syncLoginMode();
-}
+function goToSignIn(){ location.replace('sign-in.html'); }
 function showShell(){
   const s=currentSession();
   $('login-screen').style.display='none';
@@ -735,32 +675,13 @@ function showShell(){
   $('whoami-ava').textContent=s.email.slice(0,2).toUpperCase();
   renderAll();
 }
-$('login-go').onclick=async ()=>{
-  const email=$('login-email').value.trim(), pass=$('login-pass').value;
-  const btn=$('login-go'); btn.disabled=true;
-  let r;
-  if(loginMode==='signup'){
-    const confirm=$('login-confirm').value;
-    if(pass.length<6){ $('login-err').textContent='Password needs at least 6 characters.'; $('login-err').style.display='block'; btn.disabled=false; return; }
-    if(pass!==confirm){ $('login-err').textContent='Passwords don’t match.'; $('login-err').style.display='block'; btn.disabled=false; return; }
-    r=await signUpAdmin(email,pass);
-  }else{
-    r=await signInAdmin(email,pass);
-  }
-  btn.disabled=false;
-  if(r.ok) showShell();
-  else if(r.info){ $('login-info').textContent=r.msg; $('login-info').style.display='block'; }
-  else{ $('login-err').textContent=r.msg||'Incorrect email or password.'; $('login-err').style.display='block'; }
-};
-$('login-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('login-pass').focus();});
-$('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')(loginMode==='signup'?$('login-confirm').focus():$('login-go').click());});
-$('logout-btn').onclick=async ()=>{ await signOutAdmin(); showLogin(); };
+$('logout-btn').onclick=async ()=>{ await signOutAdmin(); goToSignIn(); };
 
 (async function boot(){
   try{ await loadEventsFromSupabase(); }catch(e){ console.log('[auth-debug] loadEventsFromSupabase threw:', e); }
   await Promise.race([ authReadyPromise, new Promise(res=>setTimeout(res,6000)) ]);
   const cs=currentSession();
-  console.log('[auth-debug] boot deciding:', cs?'showShell':'showLogin', 'authSession:', !!authSession, 'authProfile:', authProfile);
-  cs ? showShell() : showLogin();
+  console.log('[auth-debug] boot deciding:', cs?'showShell':'goToSignIn', 'authSession:', !!authSession, 'authProfile:', authProfile);
+  cs ? showShell() : goToSignIn();
 })();
 </script>

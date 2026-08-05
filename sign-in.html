@@ -1,0 +1,186 @@
+<title>Sign in — AGC Event App Admin</title>
+<style>
+  :root{
+    --bg:#151516; --card:#1F1F22; --card2:#2A2A2E; --line:#2C2C31; --line2:#3B3B42;
+    --red:#E8362D; --red2:#FF6157;
+    --txt:#F7F6F5; --muted:#9C9CA3;
+    --ok:#35C46E;
+    --sans:'Segoe UI',-apple-system,Roboto,'Helvetica Neue',Arial,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:var(--sans);background:#0C0A0A;color:var(--txt);min-height:100vh;
+    background-image:radial-gradient(900px 500px at 85% -10%,rgba(232,54,45,.10),transparent 55%)}
+  .btn{border:none;border-radius:100px;background:var(--red);color:#fff;font-size:12.5px;font-weight:700;font-family:var(--sans);cursor:pointer;padding:10px 18px;transition:background .15s}
+  .btn:hover{background:var(--red2)}
+  .btn:disabled{opacity:.6;cursor:default}
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .login-card{background:var(--card);border:1px solid var(--line2);border-radius:20px;padding:34px 30px;max-width:380px;width:100%;text-align:center}
+  .login-icon{width:58px;height:58px;border-radius:16px;background:rgba(232,54,45,.13);border:1px solid rgba(255,97,87,.35);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--red2)}
+  .login-card h1{font-size:18px;font-weight:800;margin-bottom:8px}
+  .login-card p{font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:20px}
+  .fld{text-align:left;margin-bottom:14px}
+  .fld label{display:block;font-size:11px;font-weight:600;margin-bottom:6px;color:var(--muted)}
+  .fld input{width:100%;background:var(--card2);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;color:var(--txt);font-size:12.5px;font-family:var(--sans);outline:none}
+  .fld input:focus{border-color:var(--red)}
+  .login-err{font-size:11.5px;color:var(--red2);margin-top:-4px;margin-bottom:12px;display:none}
+  .checking{min-height:100vh;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12.5px}
+</style>
+
+<div class="checking" id="checking">Checking your session…</div>
+
+<div class="login-wrap" id="login-screen" style="display:none">
+  <div class="login-card">
+    <div class="login-icon">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/><path d="M17.5 11.5l1.6 1.6 3-3.2"/></svg>
+    </div>
+    <h1 id="login-heading">Organizer sign-in</h1>
+    <p id="login-sub">Real Supabase account required. Been invited by an admin? <a id="login-toggle-signup" style="color:var(--red2);cursor:pointer">Create your account</a> instead.</p>
+    <div class="fld"><label for="login-email">Email</label><input id="login-email" type="email" placeholder="you@brand.ph" autocomplete="off"></div>
+    <div class="fld"><label for="login-pass">Password</label><input id="login-pass" type="password" placeholder="••••••••" autocomplete="off"></div>
+    <div class="fld" id="login-confirm-wrap" style="display:none"><label for="login-confirm">Confirm password</label><input id="login-confirm" type="password" placeholder="••••••••" autocomplete="off"></div>
+    <div class="login-err" id="login-err">Incorrect email or password.</div>
+    <div class="login-err" id="login-info" style="color:var(--ok)"></div>
+    <button class="btn" id="login-go" style="width:100%;padding:12px">Sign in</button>
+  </div>
+</div>
+
+<script src="assets/supabase.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+if(!window.supabase){
+  document.body.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:30px;text-align:center;color:#9C9CA3;font-family:sans-serif;font-size:13px;line-height:1.6">Couldn\'t load assets/supabase.js.<br>Open DevTools (F12) → Console/Network and check what\'s failing.</div>';
+  throw new Error('window.supabase is undefined');
+}
+const SUPABASE_URL='https://herebzgcxdoinkwmmhhy.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlcmViemdjeGRvaW5rd21taGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4OTc1MjQsImV4cCI6MjEwMTQ3MzUyNH0.KBYJabS8LR5u5SFLd3wZnLI2AymxzawsJqSDliDt_zg';
+
+/* Same IndexedDB-backed redundant storage as admin.html — must match exactly so
+   both pages read/write the same session. */
+const resilientStorage=(function(){
+  const DB='sb_auth_backup', STORE='kv';
+  function openDb(){
+    return new Promise((resolve,reject)=>{
+      if(!window.indexedDB){ reject(new Error('no indexedDB')); return; }
+      const req=indexedDB.open(DB,1);
+      req.onupgradeneeded=()=>{ req.result.createObjectStore(STORE); };
+      req.onsuccess=()=>resolve(req.result);
+      req.onerror=()=>reject(req.error);
+    });
+  }
+  async function idbGet(key){
+    try{
+      const db=await openDb();
+      return await new Promise((resolve,reject)=>{
+        const tx=db.transaction(STORE,'readonly');
+        const req=tx.objectStore(STORE).get(key);
+        req.onsuccess=()=>resolve(req.result==null?null:req.result);
+        req.onerror=()=>reject(req.error);
+      });
+    }catch(e){ return null; }
+  }
+  async function idbSet(key,value){
+    try{
+      const db=await openDb();
+      await new Promise((resolve,reject)=>{
+        const tx=db.transaction(STORE,'readwrite');
+        tx.objectStore(STORE).put(value,key);
+        tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
+      });
+    }catch(e){}
+  }
+  async function idbRemove(key){
+    try{
+      const db=await openDb();
+      await new Promise((resolve,reject)=>{
+        const tx=db.transaction(STORE,'readwrite');
+        tx.objectStore(STORE).delete(key);
+        tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
+      });
+    }catch(e){}
+  }
+  return {
+    async getItem(key){
+      let v=null;
+      try{ v=localStorage.getItem(key); }catch(e){}
+      if(v){ idbSet(key,v); return v; }
+      v=await idbGet(key);
+      if(v){ try{ localStorage.setItem(key,v); }catch(e){} return v; }
+      return null;
+    },
+    async setItem(key,value){
+      try{ localStorage.setItem(key,value); }catch(e){}
+      idbSet(key,value);
+    },
+    async removeItem(key){
+      try{ localStorage.removeItem(key); }catch(e){}
+      idbRemove(key);
+    }
+  };
+})();
+
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{ auth:{ storage:resilientStorage } });
+
+async function signInAdmin(email,password){
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if(error) return {ok:false, msg:error.message};
+  const { data:prof } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',data.user.id).single();
+  if(!prof || !prof.is_admin){ await sb.auth.signOut(); return {ok:false, msg:'That account exists but isn’t an admin.'}; }
+  return {ok:true};
+}
+async function signUpAdmin(email,password){
+  const { data, error } = await sb.auth.signUp({ email, password });
+  if(error) return {ok:false, msg:error.message};
+  if(!data.session) return {ok:false, msg:'Account created — check your email to confirm it, then sign in.', info:true};
+  const { data:prof } = await sb.from('profiles').select('email,is_admin,is_owner').eq('id',data.user.id).single();
+  if(!prof || !prof.is_admin){ await sb.auth.signOut(); return {ok:false, msg:'Account created, but this email wasn’t invited as an admin yet.'}; }
+  return {ok:true};
+}
+
+let loginMode='signin';
+function syncLoginMode(){
+  const su=loginMode==='signup';
+  $('login-heading').textContent = su ? 'Create your organizer account' : 'Organizer sign-in';
+  $('login-confirm-wrap').style.display = su ? 'block' : 'none';
+  $('login-go').textContent = su ? 'Create account' : 'Sign in';
+  $('login-sub').innerHTML = su
+    ? 'Only works if an existing admin already invited this email. <a id="login-toggle-signup" style="color:var(--red2);cursor:pointer">Sign in instead</a>.'
+    : 'Real Supabase account required. Been invited by an admin? <a id="login-toggle-signup" style="color:var(--red2);cursor:pointer">Create your account</a> instead.';
+  $('login-toggle-signup').onclick=()=>{ loginMode = su?'signin':'signup'; syncLoginMode(); };
+  $('login-err').style.display='none'; $('login-info').style.display='none';
+}
+$('login-toggle-signup').onclick=()=>{ loginMode='signup'; syncLoginMode(); };
+$('login-go').onclick=async ()=>{
+  const email=$('login-email').value.trim(), pass=$('login-pass').value;
+  const btn=$('login-go'); btn.disabled=true;
+  let r;
+  if(loginMode==='signup'){
+    const confirm=$('login-confirm').value;
+    if(pass.length<6){ $('login-err').textContent='Password needs at least 6 characters.'; $('login-err').style.display='block'; btn.disabled=false; return; }
+    if(pass!==confirm){ $('login-err').textContent='Passwords don’t match.'; $('login-err').style.display='block'; btn.disabled=false; return; }
+    r=await signUpAdmin(email,pass);
+  }else{
+    r=await signInAdmin(email,pass);
+  }
+  btn.disabled=false;
+  if(r.ok) location.href='admin.html';
+  else if(r.info){ $('login-info').textContent=r.msg; $('login-info').style.display='block'; }
+  else{ $('login-err').textContent=r.msg||'Incorrect email or password.'; $('login-err').style.display='block'; }
+};
+$('login-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('login-pass').focus();});
+$('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')(loginMode==='signup'?$('login-confirm').focus():$('login-go').click());});
+
+/* If a valid admin session already exists (came here by mistake, or a stale
+   bookmark), skip the form and go straight to the console. */
+(async function boot(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session){
+    try{
+      const { data:prof } = await sb.from('profiles').select('is_admin').eq('id',session.user.id).single();
+      if(prof && prof.is_admin){ location.replace('admin.html'); return; }
+    }catch(e){}
+  }
+  $('checking').style.display='none';
+  $('login-screen').style.display='flex';
+  syncLoginMode();
+})();
+</script>
