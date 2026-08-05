@@ -923,7 +923,7 @@
           </button>
           <div id="ba-oauth-note" style="font-size:10px;color:var(--muted2);text-align:center;margin-top:8px;line-height:1.5"></div>
           <div style="flex:1"></div>
-          <div style="font-size:10.5px;color:var(--muted2);text-align:center;line-height:1.6">By signing up or logging in, I accept AGC Event App's<br><a style="color:var(--blue2);text-decoration:none">Terms of Service</a> and <a style="color:var(--blue2);text-decoration:none">Privacy Policy</a></div>
+          <div style="font-size:10.5px;color:var(--muted2);text-align:center;line-height:1.6">By signing up or logging in, I accept AGC Event App's <a style="color:var(--blue2);text-decoration:none">Terms of Service</a> and <a style="color:var(--blue2);text-decoration:none">Privacy Policy</a></div>
         </div>
       </div>
 
@@ -936,6 +936,7 @@
         <div class="pv-scroll" id="ba-form-wrap" style="padding-top:10px">
           <div style="font-size:12px;color:var(--muted);margin:0 20px 18px;line-height:1.5" id="ba-sub">Optional — you can always keep buying tickets as a guest. Signing in just means your tickets follow you to any device.<br>New here? <a id="ba-toggle-signup" style="color:var(--blue2);cursor:pointer">Create an account</a> instead.</div>
           <div class="field"><label for="ba-email">Email</label><input id="ba-email" type="email" placeholder="you@example.com" autocomplete="off"></div>
+          <div class="field" id="ba-phone-wrap" style="display:none"><label for="ba-phone">Phone number</label><input id="ba-phone" type="tel" placeholder="09XX XXX XXXX" autocomplete="off"></div>
           <div class="field"><label for="ba-pass">Password</label><input id="ba-pass" type="password" placeholder="••••••••" autocomplete="off"></div>
           <div class="field" id="ba-confirm-wrap" style="display:none"><label for="ba-confirm">Confirm password</label><input id="ba-confirm" type="password" placeholder="••••••••" autocomplete="off"></div>
           <div id="ba-err" style="display:none;margin-top:8px;font-size:11.5px;color:var(--heart);padding:0 20px"></div>
@@ -1128,7 +1129,7 @@ const AV_COLORS = ['#5C7CFA','#F783AC','#63E6BE','#FFD43B','#FF922B'];
 
 let state = { cat:'All', ecat:'All', q:'', qh:'', tab:'home', sel:null, qty:1, selTicket:null,
   tickets:[], favs:new Set(), followed:new Set(['billboard','vogue','delish']),
-  paused:new Set(), profile:{name:'Archie Carrasco', email:'', city:'Manila, Philippines', photo:null},
+  paused:new Set(), profile:{name:'Archie Carrasco', email:'', city:'Manila, Philippines', photo:null, phone:''},
   linked:new Set(['google']), prefs:{push:true, email:false, remind:true, lang:'en', lightmode:false} };
 function LIVE(){ return EVENTS.filter(e=>!state.paused.has(e.id)); }
 function imgOf(ev){ return ev.img || IMG[ev.b] || ''; }
@@ -1584,8 +1585,8 @@ function syncBuyerAuthRow(){
 async function syncBuyerAccountData(){
   const u=currentUser();
   if(!u) return;
-  if(u.name || u.city || u.photo_url){
-    state.profile={...state.profile, name:u.name||state.profile.name, city:u.city||state.profile.city, photo:u.photo_url||state.profile.photo};
+  if(u.name || u.city || u.photo_url || u.phone){
+    state.profile={...state.profile, name:u.name||state.profile.name, city:u.city||state.profile.city, photo:u.photo_url||state.profile.photo, phone:u.phone||state.profile.phone};
     applyProfile();
   }
   try{
@@ -1618,7 +1619,7 @@ $('ba-continue-email').onclick=()=>{
   $('ba-landing').style.display='none';
   $('ba-form-screen').style.display='flex';
   $('ba-err').style.display='none'; $('ba-info').style.display='none';
-  $('ba-email').value=''; $('ba-pass').value=''; $('ba-confirm').value='';
+  $('ba-email').value=''; $('ba-phone').value=''; $('ba-pass').value=''; $('ba-confirm').value='';
   state.baMode='signin'; syncBaMode();
 };
 $('ba-form-back').onclick=()=>{ $('ba-form-screen').style.display='none'; $('ba-landing').style.display='flex'; };
@@ -1634,6 +1635,7 @@ state.baMode='signin';
 function syncBaMode(){
   const su=state.baMode==='signup';
   $('ba-title').textContent = su ? 'Create your account' : 'Sign in';
+  $('ba-phone-wrap').style.display = su ? 'block' : 'none';
   $('ba-confirm-wrap').style.display = su ? 'block' : 'none';
   $('ba-go').textContent = su ? 'Create account' : 'Sign in';
   $('ba-sub').innerHTML = su
@@ -1647,6 +1649,7 @@ $('ba-go').onclick=async ()=>{
   const btn=$('ba-go'); btn.disabled=true;
   let res;
   if(state.baMode==='signup'){
+    const phone=$('ba-phone').value.trim();
     const confirm=$('ba-confirm').value;
     if(pass.length<6){ $('ba-err').textContent='Password needs at least 6 characters.'; $('ba-err').style.display='block'; btn.disabled=false; return; }
     if(pass!==confirm){ $('ba-err').textContent='Passwords don’t match.'; $('ba-err').style.display='block'; btn.disabled=false; return; }
@@ -1656,8 +1659,8 @@ $('ba-go').onclick=async ()=>{
     else{
       authSession=data.session;
       try{
-        await sb.rpc('update_own_profile',{p_name:state.profile.name, p_city:state.profile.city, p_photo_url:state.profile.photo||null});
-        const { data:prof } = await sb.from('profiles').select('email,is_admin,is_owner,name,city,photo_url').eq('id',data.user.id).single();
+        await sb.rpc('update_own_profile',{p_name:state.profile.name, p_city:state.profile.city, p_photo_url:state.profile.photo||null, p_phone:phone||null});
+        const { data:prof } = await sb.from('profiles').select('email,is_admin,is_owner,name,city,photo_url,phone').eq('id',data.user.id).single();
         authProfile=prof;
       }catch(e){}
       res={ok:true};
@@ -1668,7 +1671,7 @@ $('ba-go').onclick=async ()=>{
     else{
       authSession=data.session;
       try{
-        const { data:prof } = await sb.from('profiles').select('email,is_admin,is_owner,name,city,photo_url').eq('id',data.user.id).single();
+        const { data:prof } = await sb.from('profiles').select('email,is_admin,is_owner,name,city,photo_url,phone').eq('id',data.user.id).single();
         authProfile=prof;
       }catch(e){}
       res={ok:true};
@@ -1679,7 +1682,8 @@ $('ba-go').onclick=async ()=>{
   else if(res.info){ $('ba-info').textContent=res.msg; $('ba-info').style.display='block'; }
   else{ $('ba-err').textContent=res.msg||'Something went wrong.'; $('ba-err').style.display='block'; }
 };
-$('ba-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('ba-pass').focus();});
+$('ba-email').addEventListener('keydown',e=>{if(e.key==='Enter')(state.baMode==='signup'?$('ba-phone').focus():$('ba-pass').focus());});
+$('ba-phone').addEventListener('keydown',e=>{if(e.key==='Enter')$('ba-pass').focus();});
 $('ba-pass').addEventListener('keydown',e=>{if(e.key==='Enter')(state.baMode==='signup'?$('ba-confirm').focus():$('ba-go').click());});
 async function buyerSignOut(){
   await sb.auth.signOut();
@@ -1778,7 +1782,7 @@ sb.auth.onAuthStateChange(async (event, session)=>{
   authSession=session;
   if(session){
     try{
-      const { data } = await sb.from('profiles').select('email,is_admin,is_owner,name,city,photo_url').eq('id',session.user.id).single();
+      const { data } = await sb.from('profiles').select('email,is_admin,is_owner,name,city,photo_url,phone').eq('id',session.user.id).single();
       authProfile=data||null;
     }catch(e){ authProfile=null; }
     if(hadNoSession) syncBuyerAccountData();
