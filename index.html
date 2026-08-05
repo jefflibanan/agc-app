@@ -1645,6 +1645,7 @@ function syncBaMode(){
   $('ba-err').style.display='none'; $('ba-info').style.display='none';
 }
 $('ba-go').onclick=async ()=>{
+  ignoreAuthEventsUntilNewLogin=false;
   const email=$('ba-email').value.trim(), pass=$('ba-pass').value;
   const btn=$('ba-go'); btn.disabled=true;
   let res;
@@ -1686,6 +1687,7 @@ $('ba-email').addEventListener('keydown',e=>{if(e.key==='Enter')(state.baMode===
 $('ba-phone').addEventListener('keydown',e=>{if(e.key==='Enter')$('ba-pass').focus();});
 $('ba-pass').addEventListener('keydown',e=>{if(e.key==='Enter')(state.baMode==='signup'?$('ba-confirm').focus():$('ba-go').click());});
 async function buyerSignOut(){
+  ignoreAuthEventsUntilNewLogin=true;
   try{ await sb.auth.signOut(); }catch(e){ console.error('signOut network call failed, clearing local session anyway',e); }
   authSession=null; authProfile=null;
   syncBuyerAuthRow();
@@ -1777,7 +1779,13 @@ $('wipe').onclick=()=>{
 
 /* ---------- organizer console (Supabase-backed) ---------- */
 let authSession=null, authProfile=null;
+/* Guards against a background auto-refresh (already scheduled before sign-out was
+   pressed) resurrecting the session right after buyerSignOut()/signOutAdmin() has
+   cleared it — Supabase's revoke-on-signOut call and its own refresh timer can
+   race. Cleared the moment the user deliberately starts a new sign-in/sign-up. */
+let ignoreAuthEventsUntilNewLogin=false;
 sb.auth.onAuthStateChange(async (event, session)=>{
+  if(ignoreAuthEventsUntilNewLogin && session){ console.log('[auth-debug] ignoring',event,'— session was just intentionally signed out'); return; }
   const hadNoSession=!authSession;
   authSession=session;
   if(session){
