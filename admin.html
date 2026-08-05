@@ -14,14 +14,19 @@
   }
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:100vh}
-  .shell{display:flex;min-height:100vh;max-width:1280px;margin:0 auto}
+  .shell{display:flex;flex-direction:column;min-height:100vh}
+  .body-row{display:flex;flex:1;min-width:0}
+
+  /* top navbar */
+  .topnav{height:63px;flex-shrink:0;background:var(--sb-bg);border-bottom:1px solid var(--sb-line);display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+  .topnav-right{display:flex;align-items:center;gap:12px}
 
   /* sidebar */
-  .side{width:225px;flex-shrink:0;background:var(--sb-bg);border-right:1px solid var(--sb-line);padding:22px 14px;display:flex;flex-direction:column;gap:4px}
-  .logo{font-size:17px;font-weight:800;padding:0 10px 4px;color:var(--sb-txt)}
+  .side{width:225px;flex-shrink:0;background:var(--sb-bg);border-right:1px solid var(--sb-line);padding:18px 14px 14px;display:flex;flex-direction:column;gap:4px}
+  .logo{font-size:17px;font-weight:800;color:var(--sb-txt)}
   .logo i{font-style:normal;color:var(--red2)}
   .logo-sub{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--sb-muted);padding:0 10px 18px}
-  .snav{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:11px;border:none;background:none;color:var(--sb-muted);
+  .snav{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:8px;border:none;background:none;color:var(--sb-muted);
     font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;text-align:left;width:100%;transition:all .15s}
   .snav:hover{color:var(--sb-txt);background:rgba(255,255,255,.06)}
   .snav.on{background:rgba(232,54,45,.22);color:#FF8177}
@@ -30,12 +35,12 @@
   .side-foot a{color:#FF8177;text-decoration:none}
 
   /* main */
-  .main{flex:1;padding:24px 28px 60px;min-width:0}
-  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;gap:14px;flex-wrap:wrap}
+  .main{flex:1;padding:24px 28px 60px;min-width:0;max-width:1100px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:14px;flex-wrap:wrap;background:var(--card);box-shadow:var(--shadow);border-radius:10px;padding:18px 22px}
   .topbar h1{font-size:20px;font-weight:800}
   .topbar .sub{font-size:12px;color:var(--muted);margin-top:3px}
   .top-actions{display:flex;gap:10px}
-  .btn{border:none;border-radius:100px;background:var(--red);color:#fff;font-size:12.5px;font-weight:700;font-family:var(--sans);cursor:pointer;padding:10px 18px;transition:background .15s}
+  .btn{border:none;border-radius:6px;background:var(--red);color:#fff;font-size:12.5px;font-weight:700;font-family:var(--sans);cursor:pointer;padding:10px 18px;transition:background .15s}
   .btn:hover{background:var(--red2)}
   .btn.ghost{background:var(--card);border:1px solid var(--line2);color:var(--txt)}
   .btn.ghost:hover{background:var(--card2)}
@@ -58,7 +63,7 @@
   .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:18px;box-shadow:var(--shadow)}
   .panel h2{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-  @media (max-width:900px){.grid2{grid-template-columns:1fr}.shell{flex-direction:column}.side{width:100%;flex-direction:row;flex-wrap:wrap;border-right:none;border-bottom:1px solid var(--sb-line)}.snav{width:auto}.side-foot{display:none}}
+  @media (max-width:900px){.grid2{grid-template-columns:1fr}.body-row{flex-direction:column}.side{width:100%;flex-direction:row;flex-wrap:wrap;border-right:none;border-bottom:1px solid var(--sb-line)}.snav{width:auto}.side-foot{display:none}.whoami-info{display:none}}
 
   /* brand bars */
   .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12px}
@@ -112,13 +117,12 @@
   .modal-foot{display:flex;gap:10px;align-items:center;margin-top:18px;grid-column:1/-1;flex-wrap:wrap}
   .hint{font-size:10.5px;color:var(--muted2);margin-top:5px}
 
-  .side-divider{height:1px;background:var(--sb-line);margin:10px 6px 12px}
-  .whoami{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:var(--sb-card);border:1px solid var(--sb-line)}
-  .whoami-ava{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--red2),var(--red-deep));color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .whoami-info{flex:1;min-width:0}
-  .whoami-k{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--sb-muted)}
+  .whoami{display:flex;align-items:center;gap:9px;padding:5px 12px 5px 5px;border-radius:100px;background:var(--sb-card);border:1px solid var(--sb-line)}
+  .whoami-ava{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--red2),var(--red-deep));color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .whoami-info{min-width:0;max-width:180px}
+  .whoami-k{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--sb-muted)}
   .whoami-email{font-size:11.5px;font-weight:700;color:var(--sb-txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
-  .logout-btn{display:flex;align-items:center;gap:7px;width:100%;margin-top:8px;background:none;border:1px solid var(--sb-line);border-radius:10px;color:var(--sb-muted);cursor:pointer;font-size:11.5px;font-weight:600;padding:8px 10px;font-family:var(--sans);transition:all .15s}
+  .logout-btn{display:flex;align-items:center;gap:7px;width:auto;background:none;border:1px solid var(--sb-line);border-radius:8px;color:var(--sb-muted);cursor:pointer;font-size:11.5px;font-weight:600;padding:9px 14px;font-family:var(--sans);transition:all .15s}
   .logout-btn:hover{color:#FF8177;border-color:rgba(255,97,87,.4);background:rgba(232,54,45,.12)}
   .logout-btn svg{flex-shrink:0}
   .admin-row{display:flex;align-items:center;gap:12px;background:var(--card2);border:1px solid var(--line2);border-radius:12px;padding:11px 13px;margin-bottom:9px;font-size:12.5px}
@@ -129,8 +133,24 @@
 </style>
 
 <div class="shell" id="app-shell" style="display:none">
-  <aside class="side">
+  <div class="topnav">
     <div class="logo">AGC <i>Event App</i></div>
+    <div class="topnav-right">
+      <div class="whoami">
+        <div class="whoami-ava" id="whoami-ava"></div>
+        <div class="whoami-info">
+          <div class="whoami-k">Signed in as</div>
+          <div class="whoami-email" id="whoami-email"></div>
+        </div>
+      </div>
+      <button class="logout-btn" id="logout-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        Sign out
+      </button>
+    </div>
+  </div>
+  <div class="body-row">
+  <aside class="side">
     <div class="logo-sub">Organizer Console</div>
     <button class="snav on" data-v="dash"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="11" rx="2"/><rect x="13" y="3" width="8" height="5" rx="2"/><rect x="13" y="10" width="8" height="11" rx="2"/><rect x="3" y="16" width="8" height="5" rx="2"/></svg>Dashboard</button>
     <button class="snav" data-v="events"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Events</button>
@@ -138,18 +158,6 @@
     <button class="snav" data-v="checkin"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12.5l3 3 5.5-6.5"/></svg>Check-in</button>
     <button class="snav" data-v="members"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="9" r="3.2"/><circle cx="17" cy="10" r="2.6"/><path d="M2.5 20c0-3.4 2.5-5.8 5.5-5.8s5.5 2.4 5.5 5.8"/><path d="M14.5 14.6c2.6.2 4.5 2.4 4.5 5.4"/></svg>Members</button>
     <button class="snav" data-v="admins"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16.5 8.5a2.6 2.6 0 1 0 0-5.2M20 20c0-2.7-1.7-4.8-4.2-5.4"/></svg>Admins</button>
-    <div class="side-divider"></div>
-    <div class="whoami">
-      <div class="whoami-ava" id="whoami-ava"></div>
-      <div class="whoami-info">
-        <div class="whoami-k">Signed in as</div>
-        <div class="whoami-email" id="whoami-email"></div>
-      </div>
-    </div>
-    <button class="logout-btn" id="logout-btn">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
-      Sign out
-    </button>
     <div class="side-foot">Demo console — data lives in this browser and syncs with the AGC Event App opened here. Wire to a real API for production.</div>
   </aside>
 
@@ -244,6 +252,7 @@
     </section>
 
   </main>
+  </div>
 </div>
 
 <div class="modal-veil" id="edit-veil">
